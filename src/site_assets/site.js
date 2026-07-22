@@ -21,7 +21,7 @@ document.addEventListener("DOMContentLoaded", () => {
       if (matches) visible += 1;
     });
 
-    if (resultCount) resultCount.textContent = `${visible} publication${visible === 1 ? "" : "s"}`;
+    if (resultCount) resultCount.textContent = `${visible} project${visible === 1 ? "" : "s"}`;
     if (clearFilters) clearFilters.hidden = !(query || year || type);
     if (emptyState) emptyState.hidden = visible !== 0;
   };

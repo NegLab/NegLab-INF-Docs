@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Build the NegLab INF GitHub Pages publication site from BibTeX files."""
+"""Build the NegLab INF GitHub Pages project catalogue from BibTeX files."""
 
 from __future__ import annotations
 
@@ -166,7 +166,7 @@ def _author_names(*, value: str) -> list[str]:
 
 def _filename_for_key(*, bib_key: str) -> str:
     ascii_key = unicodedata.normalize("NFKD", bib_key).encode("ascii", "ignore").decode("ascii")
-    slug = re.sub(r"[^a-z0-9]+", "-", ascii_key.lower()).strip("-") or "publication"
+    slug = re.sub(r"[^a-z0-9]+", "-", ascii_key.lower()).strip("-") or "project"
     digest = hashlib.sha256(bib_key.encode("utf-8")).hexdigest()[:10]
     return f"{slug}-{digest}.html"
 
@@ -186,7 +186,7 @@ def _entry_to_publication(*, entry: dict[str, object]) -> dict[str, object]:
         raise TypeError("BibTeX fields must be a dictionary")
     text_fields = {str(key): str(value) for key, value in fields.items()}
     entry_type = str(entry["entry_type"])
-    title = _latex_to_text(value=text_fields.get("title", text_fields.get("name", "Untitled publication")))
+    title = _latex_to_text(value=text_fields.get("title", text_fields.get("name", "Untitled project")))
     subtitle = _latex_to_text(value=text_fields.get("subtitle", ""))
     venue = _latex_to_text(
         value=text_fields.get("journal", text_fields.get("booktitle", text_fields.get("institution", "")))
@@ -212,6 +212,7 @@ def _entry_to_publication(*, entry: dict[str, object]) -> dict[str, object]:
         "misc": "Publication",
         "phdthesis": "Doctoral thesis",
         "proceedings": "Proceedings",
+        "project": "Project",
         "techreport": "Technical report",
         "unpublished": "Preprint",
     }
@@ -278,10 +279,10 @@ def _page_shell(*, title: str, description: str, body: str, asset_prefix: str, p
       <span class="brand-mark">INF</span>
       <span><strong>{_escape(value=project_name)}</strong><small>Information Infrastructure</small></span>
     </a>
-    <nav aria-label="Main navigation"><a href="{asset_prefix}index.html#publications">Publications</a><a href="https://www.neglab.de/" rel="noopener noreferrer">NegLaB {_icon(name='external')}</a></nav>
+    <nav aria-label="Main navigation"><a href="{asset_prefix}index.html#projects">Projects</a><a href="https://www.neglab.de/" rel="noopener noreferrer">NegLaB {_icon(name='external')}</a></nav>
   </header>
   <main id="main-content">{body}</main>
-  <footer><div><strong>{_escape(value=project_name)}</strong><p>Information infrastructure for collaborative negation research.</p></div><p>CRC 1629 · Goethe University Frankfurt</p></footer>
+  <footer><div><strong>{_escape(value=project_name)}</strong><p>Projects and information infrastructure for collaborative negation research.</p></div><p>CRC 1629 · Goethe University Frankfurt</p></footer>
 </body>
 </html>
 """
@@ -298,12 +299,13 @@ def _render_index_card(*, publication: dict[str, object]) -> str:
         [str(publication["title"]), *[str(author) for author in authors], str(publication["venue"]), *[str(k) for k in keywords]]
     ).lower()
     venue = f'<p class="venue">{_escape(value=publication["venue"])}</p>' if publication["venue"] else ""
+    author_line = f'<p class="authors">{_format_author_list(authors=authors)}</p>' if authors else ""
     note = f'<span class="status-chip">{_escape(value=publication["note"])}</span>' if publication["note"] else ""
     return f"""<article class="publication-card" data-year="{_escape(value=publication['year'])}" data-type="{_escape(value=publication['entry_type'])}" data-search="{_escape(value=searchable)}">
   <div class="card-year"><span>{_escape(value=publication['year'])}</span><small>{_escape(value=publication['type_label'])}</small></div>
   <div class="card-content">
     <div class="card-heading"><h3><a href="publications/{_escape(value=publication['filename'])}">{_escape(value=publication['title'])}</a></h3>{note}</div>
-    <p class="authors">{_format_author_list(authors=authors)}</p>{venue}
+    {author_line}{venue}
   </div>
   <a class="card-arrow" href="publications/{_escape(value=publication['filename'])}" aria-label="View {_escape(value=publication['title'])}">{_icon(name='arrow')}</a>
 </article>"""
@@ -316,35 +318,37 @@ def render_index(*, publications: list[dict[str, object]], project_name: str, pr
     type_options = "".join(f'<option value="{_escape(value=key)}">{_escape(value=label)}</option>' for key, label in types)
     cards = "\n".join(_render_index_card(publication=publication) for publication in publications)
     author_count = len({author for publication in publications for author in publication["authors"] if isinstance(author, str)})
+    publication_count = sum(publication["entry_type"] != "project" for publication in publications)
     body = f"""
 <section class="hero">
   <div class="eyebrow">CRC 1629 · Negation in Language and Beyond</div>
   <h1>{_escape(value=project_subtitle)}</h1>
-  <p>Research outputs from the INF subproject, building sustainable data, tools, and methods for collaborative research on negation.</p>
-  <a class="button button-primary" href="#publications">Browse publications {_icon(name='arrow')}</a>
+  <p>Projects and research outputs from the INF subproject, building sustainable data, tools, and methods for collaborative research on negation.</p>
+  <a class="button button-primary" href="#projects">Browse projects {_icon(name='arrow')}</a>
   <div class="hero-orbit" aria-hidden="true"><span></span><span></span><span></span></div>
 </section>
-<section class="stats" aria-label="Publication statistics">
-  <div><strong>{len(publications)}</strong><span>Publications</span></div>
+<section class="stats" aria-label="Project statistics">
+  <div><strong>{len(publications)}</strong><span>Projects</span></div>
+  <div><strong>{publication_count}</strong><span>Publications</span></div>
   <div><strong>{author_count}</strong><span>Contributors</span></div>
-  <div><strong>{len(years)}</strong><span>Publication years</span></div>
+  <div><strong>{len(years)}</strong><span>Years represented</span></div>
 </section>
-<section class="publication-section" id="publications">
-  <div class="section-heading"><div><span class="eyebrow">Research library</span><h2>Publications</h2></div><p>Explore the INF subproject’s articles, conference papers, and technical reports.</p></div>
+<section class="publication-section" id="projects">
+  <div class="section-heading"><div><span class="eyebrow">INF catalogue</span><h2>Projects</h2></div><p>Explore the INF subproject’s software, repositories, data resources, articles, conference papers, and technical reports.</p></div>
   <div class="filters" role="search">
-    <label class="search-field">{_icon(name='search')}<span class="sr-only">Search publications</span><input id="publication-search" type="search" placeholder="Search title, author, venue, or keyword…" autocomplete="off"></label>
+    <label class="search-field">{_icon(name='search')}<span class="sr-only">Search projects</span><input id="publication-search" type="search" placeholder="Search project, author, venue, or keyword…" autocomplete="off"></label>
     <label><span class="sr-only">Filter by year</span><select id="year-filter"><option value="">All years</option>{year_options}</select></label>
-    <label><span class="sr-only">Filter by publication type</span><select id="type-filter"><option value="">All types</option>{type_options}</select></label>
+    <label><span class="sr-only">Filter by project type</span><select id="type-filter"><option value="">All types</option>{type_options}</select></label>
   </div>
-  <div class="result-bar"><span id="result-count">{len(publications)} publications</span><button id="clear-filters" type="button" hidden>Clear filters</button></div>
+  <div class="result-bar"><span id="result-count">{len(publications)} projects</span><button id="clear-filters" type="button" hidden>Clear filters</button></div>
   <div class="publication-list" id="publication-list">{cards}</div>
-  <div class="empty-state" id="empty-state" hidden><span>{_icon(name='search')}</span><h3>No publications found</h3><p>Try another search or clear the filters.</p></div>
+  <div class="empty-state" id="empty-state" hidden><span>{_icon(name='search')}</span><h3>No projects found</h3><p>Try another search or clear the filters.</p></div>
 </section>
 <script src="assets/site.js" defer></script>
 """
     return _page_shell(
-        title=f"{project_name} · Publications",
-        description="Publications and research outputs of the NegLab CRC 1629 INF subproject.",
+        title=f"{project_name} · Projects",
+        description="Projects, publications, and research outputs of the NegLab CRC 1629 INF subproject.",
         body=body,
         asset_prefix="",
         project_name=project_name,
@@ -359,8 +363,8 @@ def render_repository_link(*, url: str) -> str:
 
 def _detail_rows(*, publication: dict[str, object]) -> str:
     values = [
-        ("Publication type", publication["type_label"]),
-        ("Published", publication["year"]),
+        ("Entry type", publication["type_label"]),
+        ("Year", publication["year"]),
         ("Venue", publication["venue"]),
         ("Volume", publication["volume"]),
         ("Issue / number", publication["number"]),
@@ -382,9 +386,12 @@ def render_detail(*, publication: dict[str, object], repository_url: str, projec
     subtitle = f'<p class="subtitle">{_escape(value=publication["subtitle"])}</p>' if publication["subtitle"] else ""
     venue = f'<p class="detail-venue">{_escape(value=publication["venue"])} · {_escape(value=publication["year"])}</p>' if publication["venue"] else f'<p class="detail-venue">{_escape(value=publication["year"])}</p>'
     note = f'<span class="status-chip">{_escape(value=publication["note"])}</span>' if publication["note"] else ""
+    is_project = publication["entry_type"] == "project"
+    author_line = f'<p class="detail-authors">{_format_author_list(authors=authors)}</p>' if authors else ""
     actions: list[str] = []
     if publication["url"]:
-        actions.append(f'<a class="button button-primary" href="{_escape(value=publication["url"])}" rel="noopener noreferrer">{_icon(name="external")} View publication</a>')
+        action_label = "Visit project" if is_project else "View publication"
+        actions.append(f'<a class="button button-primary" href="{_escape(value=publication["url"])}" rel="noopener noreferrer">{_icon(name="external")} {action_label}</a>')
     if publication["pdf"]:
         actions.append(f'<a class="button button-secondary" href="{_escape(value=publication["pdf"])}" rel="noopener noreferrer">{_icon(name="file")} PDF</a>')
     actions.append(f'<!-- PUBLICATION_LINK_START -->{render_repository_link(url=repository_url)}<!-- PUBLICATION_LINK_END -->')
@@ -393,26 +400,26 @@ def render_detail(*, publication: dict[str, object], repository_url: str, projec
     keyword_html = "".join(f'<span>{_escape(value=keyword)}</span>' for keyword in keywords)
     keyword_section = f'<section class="paper-section"><h2>Keywords</h2><div class="keyword-list">{keyword_html}</div></section>' if keywords else ""
     body = f"""
-<div class="detail-back"><a href="../index.html#publications">← Back to all publications</a></div>
+<div class="detail-back"><a href="../index.html#projects">← Back to all projects</a></div>
 <article class="paper">
   <header class="paper-header">
     <div class="paper-type">{_icon(name='book')} {_escape(value=publication['type_label'])}{note}</div>
     <h1>{_escape(value=title)}</h1>{subtitle}
-    <p class="detail-authors">{_format_author_list(authors=authors)}</p>{venue}
+    {author_line}{venue}
     <div class="paper-actions">{''.join(actions)}</div>
   </header>
   <div class="paper-layout">
     <div>{abstract_section}{keyword_section}
       <section class="paper-section citation-section"><div class="section-title-row"><h2>BibTeX</h2><button class="copy-button" type="button" data-copy-bib>{_icon(name='copy')} Copy</button></div><pre><code id="bibtex-entry">{_escape(value=publication['raw_bibtex'])}</code></pre></section>
     </div>
-    <aside class="paper-facts"><h2>Publication details</h2><dl>{_detail_rows(publication=publication)}</dl></aside>
+    <aside class="paper-facts"><h2>{'Project details' if is_project else 'Publication details'}</h2><dl>{_detail_rows(publication=publication)}</dl></aside>
   </div>
 </article>
 <script src="../assets/site.js" defer></script>
 """
     page = _page_shell(
         title=f"{title} · {project_name}",
-        description=abstract[:155] if abstract else f"Publication details for {title}.",
+        description=abstract[:155] if abstract else f"{'Project' if is_project else 'Publication'} details for {title}.",
         body=body,
         asset_prefix="../",
         project_name=project_name,
@@ -458,7 +465,7 @@ def build_site(
     project_subtitle: str,
     source_root: Path,
 ) -> dict[str, int]:
-    """Build publication pages and return counts for generated/skipped entries."""
+    """Build project catalogue pages and return counts for generated/skipped entries."""
     all_entries: list[dict[str, object]] = []
     for bib_path in bib_paths:
         if not bib_path.is_file():
@@ -525,16 +532,22 @@ def build_site(
         links_path.write_text("{}\n", encoding="utf-8")
     (docs_dir / ".nojekyll").touch()
     _write_assets(docs_dir=docs_dir, source_root=source_root)
-    return {"generated": generated, "skipped": skipped, "total": len(publications), "ignored": len(all_entries) - len(publications)}
+    return {
+        "generated": generated,
+        "skipped": skipped,
+        "total": len(publications),
+        "publications": sum(publication["entry_type"] != "project" for publication in publications),
+        "ignored": len(all_entries) - len(publications),
+    }
 
 
 def _argument_parser(*, default_docs_dir: Path) -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(description="Generate a GitHub Pages publication site from one or more BibTeX files.")
+    parser = argparse.ArgumentParser(description="Generate a GitHub Pages project catalogue from one or more BibTeX files.")
     parser.add_argument("bib_files", nargs="+", type=Path, help="BibTeX file(s) to import")
     parser.add_argument("--docs-dir", type=Path, default=default_docs_dir, help=f"site output directory (default: {default_docs_dir})")
-    parser.add_argument("--full-rebuild", action="store_true", help="replace every generated publication page and remove orphaned publication HTML files")
+    parser.add_argument("--full-rebuild", action="store_true", help="replace every generated project page and remove orphaned generated HTML files")
     parser.add_argument("--project-name", default="NegLab INF", help="short project name shown in the site header")
-    parser.add_argument("--project-subtitle", default="Infrastructure for research on negation", help="main heading shown on the publication index")
+    parser.add_argument("--project-subtitle", default="Infrastructure for research on negation", help="main heading shown on the project index")
     return parser
 
 
@@ -543,7 +556,7 @@ def main(*, argv: Sequence[str] | None = None) -> int:
     parser = _argument_parser(default_docs_dir=project_root / "docs")
     arguments = parser.parse_args(argv)
     allowed_entry_types = frozenset(
-        {"article", "book", "booklet", "inbook", "incollection", "inproceedings", "manual", "mastersthesis", "misc", "phdthesis", "proceedings", "techreport", "unpublished"}
+        {"article", "book", "booklet", "inbook", "incollection", "inproceedings", "manual", "mastersthesis", "misc", "phdthesis", "proceedings", "project", "techreport", "unpublished"}
     )
     result = build_site(
         bib_paths=arguments.bib_files,
@@ -555,7 +568,7 @@ def main(*, argv: Sequence[str] | None = None) -> int:
         source_root=Path(__file__).resolve().parent,
     )
     print(
-        f"Imported {result['total']} publications: {result['generated']} generated, "
+        f"Imported {result['total']} projects and outputs ({result['publications']} publications): {result['generated']} generated, "
         f"{result['skipped']} already present, {result['ignored']} unsupported entries ignored."
     )
     return 0

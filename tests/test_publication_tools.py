@@ -27,7 +27,14 @@ class PublicationToolTests(unittest.TestCase):
   abstract = {An abstract with {nested braces}.}
 }
 
-@project{ignored, name = {Not a publication}, year = {2026}}
+@project{Repository:2026,
+  name = {Negation Data Explorer},
+  author = {Doe, Jane},
+  year = {2026},
+  url = {https://github.com/example/explorer},
+  abstract = {A repository for exploring negation data.},
+  keywords = {software, data}
+}
 """,
                 encoding="utf-8",
             )
@@ -35,9 +42,9 @@ class PublicationToolTests(unittest.TestCase):
             bib_paths=[bib_path],
             docs_dir=root / "docs",
             full_rebuild=full_rebuild,
-            allowed_entry_types=frozenset({"article"}),
+            allowed_entry_types=frozenset({"article", "project"}),
             project_name="Test INF",
-            project_subtitle="Test publications",
+            project_subtitle="Test projects",
             source_root=Path(__file__).resolve().parent.parent / "src",
         )
 
@@ -49,18 +56,25 @@ class PublicationToolTests(unittest.TestCase):
         self.assertEqual(entries[0]["bib_key"], "key")
         self.assertEqual(entries[0]["fields"]["title"], "{Nested} title")
 
-    def test_build_is_incremental_and_ignores_project_record(self) -> None:
+    def test_build_is_incremental_and_includes_project_record(self) -> None:
         with tempfile.TemporaryDirectory() as temporary_directory:
             root = Path(temporary_directory)
             first = self._build_fixture(root=root)
             second = self._build_fixture(root=root)
-            self.assertEqual(first, {"generated": 1, "skipped": 0, "total": 1, "ignored": 1})
-            self.assertEqual(second, {"generated": 0, "skipped": 1, "total": 1, "ignored": 1})
+            self.assertEqual(first, {"generated": 2, "skipped": 0, "total": 2, "publications": 1, "ignored": 0})
+            self.assertEqual(second, {"generated": 0, "skipped": 2, "total": 2, "publications": 1, "ignored": 0})
             manifest = json.loads((root / "docs/publications/index.json").read_text(encoding="utf-8"))
-            self.assertEqual(manifest["publications"][0]["bib_key"], "Doe:2026")
-            page = next((root / "docs/publications").glob("*.html")).read_text(encoding="utf-8")
+            entries = {entry["bib_key"]: entry for entry in manifest["publications"]}
+            self.assertEqual(set(entries), {"Doe:2026", "Repository:2026"})
+            page = (root / "docs/publications" / entries["Doe:2026"]["filename"]).read_text(encoding="utf-8")
             self.assertIn("Max Müller", page)
             self.assertIn("https://doi.org/10.1000/example", page)
+            project_page = (root / "docs/publications" / entries["Repository:2026"]["filename"]).read_text(encoding="utf-8")
+            self.assertIn("A repository for exploring negation data.", project_page)
+            self.assertIn("Visit project", project_page)
+            index = (root / "docs/index.html").read_text(encoding="utf-8")
+            self.assertIn("<strong>2</strong><span>Projects</span>", index)
+            self.assertIn("<strong>1</strong><span>Publications</span>", index)
 
     def test_full_rebuild_removes_orphaned_html(self) -> None:
         with tempfile.TemporaryDirectory() as temporary_directory:
@@ -73,7 +87,7 @@ class PublicationToolTests(unittest.TestCase):
             result = self._build_fixture(root=root, full_rebuild=True)
             self.assertFalse(orphan.exists())
             self.assertTrue(manual_page.exists())
-            self.assertEqual(result["generated"], 1)
+            self.assertEqual(result["generated"], 2)
 
     def test_link_update_is_persistent_across_rebuild(self) -> None:
         with tempfile.TemporaryDirectory() as temporary_directory:
