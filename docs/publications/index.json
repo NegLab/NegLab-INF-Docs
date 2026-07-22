@@ -1,0 +1,88 @@
+{
+  "publications": [
+    {
+      "bib_key": "Borkowski:et:al:2026",
+      "filename": "borkowski-et-al-2026-2dbbc97658.html",
+      "title": "DUUIgateway: A Web Service for Platform-independent, Ubiquitous Big Data NLP",
+      "year": "2026",
+      "entry_type": "article"
+    },
+    {
+      "bib_key": "Hammerla:Mehler:2026:a",
+      "filename": "hammerla-mehler-2026-a-9a2ea1d0c5.html",
+      "title": "Gutenberg+: A More Temporally Faithful Corpus for Diachronic NLP",
+      "year": "2026",
+      "entry_type": "inproceedings"
+    },
+    {
+      "bib_key": "Abusaleh:et:al:2026",
+      "filename": "abusaleh-et-al-2026-588252f184.html",
+      "title": "Learning to Detect Cross-Modal Negation: An Analysis of Latent Representations and an Attention-Based Solution",
+      "year": "2026",
+      "entry_type": "inproceedings"
+    },
+    {
+      "bib_key": "Hammerla:Mehler:2026:b",
+      "filename": "hammerla-mehler-2026-b-b15660f609.html",
+      "title": "Negation in Reasoning Traces: Interpretable Signals of Correctness and Provenance",
+      "year": "2026",
+      "entry_type": "inproceedings"
+    },
+    {
+      "bib_key": "Luecking:Hammerla:Mehler:2026",
+      "filename": "luecking-hammerla-mehler-2026-3c46533604.html",
+      "title": "Not every quantifier can be negated",
+      "year": "2026",
+      "entry_type": "inproceedings"
+    },
+    {
+      "bib_key": "Hammerla:etal:2026:c",
+      "filename": "hammerla-etal-2026-c-e1418412ed.html",
+      "title": "RT-Seg: A Toolkit for Reasoning Trace Segmentation",
+      "year": "2026",
+      "entry_type": "inproceedings"
+    },
+    {
+      "bib_key": "Hammerla:et:al:2025b",
+      "filename": "hammerla-et-al-2025b-cded7c9c2f.html",
+      "title": "D-Neg: Syntax-Aware Graph Reasoning for Negation Detection",
+      "year": "2025",
+      "entry_type": "inproceedings"
+    },
+    {
+      "bib_key": "Bahmanian:et:al:2025",
+      "filename": "bahmanian-et-al-2025-c190587029.html",
+      "title": "Data management protocol for CRC 1629",
+      "year": "2025",
+      "entry_type": "techreport"
+    },
+    {
+      "bib_key": "Abrami:et:al:2025:a",
+      "filename": "abrami-et-al-2025-a-fabce1edf1.html",
+      "title": "Docker Unified UIMA Interface: New perspectives for NLP on big data",
+      "year": "2025",
+      "entry_type": "article"
+    },
+    {
+      "bib_key": "Luecking:Ginzburg:2025-exceptions",
+      "filename": "luecking-ginzburg-2025-exceptions-fc1c9cc26c.html",
+      "title": "Exceptions From Rules and Noteworthy Exceptions",
+      "year": "2025",
+      "entry_type": "article"
+    },
+    {
+      "bib_key": "Bundan:Abrami:Mehler:2025",
+      "filename": "bundan-abrami-mehler-2025-8933b17591.html",
+      "title": "Multimodal Docker Unified UIMA Interface: New Horizons for Distributed Microservice-Oriented Processing of Corpora using UIMA",
+      "year": "2025",
+      "entry_type": "inproceedings"
+    },
+    {
+      "bib_key": "Hammerla:et:al:2025a",
+      "filename": "hammerla-et-al-2025a-03143c8588.html",
+      "title": "Standardizing Heterogeneous Corpora with DUUR: A Dual Data- and Process-Oriented Approach to Enhancing NLP Pipeline Integration",
+      "year": "2025",
+      "entry_type": "inproceedings"
+    }
+  ]
+}

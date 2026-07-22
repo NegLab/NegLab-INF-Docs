@@ -1,0 +1,337 @@
+@inproceedings{Hammerla:etal:2026:c,
+  title     = {RT-Seg: A Toolkit for Reasoning Trace Segmentation},
+  author    = {Leon Hammerla and Bhuvanesh Verma and Alexander Mehler},
+  booktitle = {KONVENS 2026 - Context matters: NLP beyond Text},
+  year      = {2026},
+  address   = {Hamburg (Germany)},
+  keywords  = {neglab},
+  note      = {accepted}
+}
+
+@inproceedings{Hammerla:Mehler:2026:b,
+  title     = {Negation in Reasoning Traces: Interpretable Signals of Correctness
+               and Provenance},
+  author    = {Leon Hammerla and Alexander Mehler},
+  booktitle = {Proceedings of the 6th Workshop on Natural Logic Meets Machine Learning (NALOMA)},
+  year      = {2026},
+  address   = {Prague (Czech Republic)},
+  keywords  = {neglab},
+  note      = {accepted}
+}
+
+@inproceedings{Hammerla:Mehler:2026:a,
+  title     = {{Gutenberg+}: A More Temporally Faithful Corpus for Diachronic {NLP}},
+  author    = {Leon Hammerla and Alexander Mehler},
+  booktitle = {Proceedings Workshop on Structured Linguistic Data and Evaluation
+               (SLiDE 2026), co-located with the Language Resources and Evaluation
+               Conference (LREC 2026)},
+  year      = {2026},
+  keywords  = {neglab},
+  pages     = {86--92},
+  address   = {Palma, Mallorca, Spain},
+  publisher = {European Language Resources Association (ELRA)},
+  editor    = {Erhard Hinrichs (Tübingen University, Germany) and Joakim Nivre (Uppsala University, Sweden)
+               and Petya Osenova (Sofia University, Bulgaria) and James Pustejovsky (Brandeis University, USA)
+               and Claus Zinn (Tübingen University, Germany)},
+  doi       = {10.63317/2kjofgrkkbt9},
+  abstract  = {We introduce Gutenberg+, a temporally more faithful version of
+               the Project Gutenberg (PG) corpus, one of the most widely used
+               resources for diachronic text analysis. Despite its popularity,
+               the PG corpus contains a major yet overlooked flaw: around 15%
+               of its entries are collections (e.g., anthologies of books, letters,
+               or poems) rather than atomic works, which distorts temporal analyses
+               since such collections may span multiple decades. We present an
+               automatic method to detect and split these collections into their
+               constituent works, producing a finer-grained and temporally consistent
+               corpus. We further re-annotate publication years using LLM-based
+               retrieval-augmented generative methods, demonstrating the potential
+               of LLMs to enhance structured linguistic resources. To illustrate
+               the utility of Gutenberg+, we conduct a small-scale diachronic
+               case study on negation, showing that our refined corpus captures
+               more nuanced cross-linguistic variation than the original PG data.
+               Finally, we release the corpus in UIMA format with full metadata
+               and linguistic annotations, providing a standardized resource
+               for future research on diachronic language change.}
+}
+
+@inproceedings{Abusaleh:et:al:2026,
+  author    = {AbuSaleh, Ali and Hammerla, Leon and Mehler, Alexander},
+  booktitle = {2026 8th International Conference on Natural Language Processing (ICNLP)},
+  title     = {Learning to Detect Cross-Modal Negation: An Analysis of Latent
+               Representations and an Attention-Based Solution},
+  year      = {2026},
+  volume    = {},
+  number    = {},
+  pages     = {613-622},
+  keywords  = {Modeling;Videos;Labeling;Visualization;Signal detection;Large language models;Head;Media;Accuracy;Annotations;Vision language model;Natural language processing;Cross-modal retrieval;negation detection;video analysis;Multimodal analysis;Political Communication, neglab, new-data-spaces, circlet},
+  doi       = {10.1109/ICNLP69856.2026.11527861},
+  abstract  = {Detecting high-level semantic concepts like negation across modalities
+               remains a challenge for current multimodal systems. We analyze
+               this as a fundamental representation learning problem, providing
+               the first evidence that negation does not form a linearly or non-linearly
+               separable class in the latent spaces of standard vision-language
+               models (VLMs). We demonstrate that pretrained embeddings primarily
+               encode modality-specific features, lacking a generalizable negation
+               signal. To overcome this, we propose a novel cross-modal attention
+               architecture that explicitly models inter-modal dependencies,
+               achieving performance gains of up to +7.03% F1 over unimodal baselines.
+               Our analysis reveals a key asymmetry: while textual negation often
+               appears independently, visual negation is semantically dependent
+               on linguistic context, a finding validated through our statistical
+               analysis of 3,222 political video-text pairs automatically annotated
+               via Qwen2.5-VL. By combining this analysis with self-supervised
+               video representations (JEPA2), we advance the modeling of temporal
+               negation. This work provides new methods and insights for learning
+               robust, semantically-aligned representations in multimodal systems.}
+}
+
+@article{Borkowski:et:al:2026,
+  title     = {{DUUIgateway}: A Web Service for Platform-independent, Ubiquitous Big Data NLP},
+  journal   = {SoftwareX},
+  volume    = {34},
+  pages     = {102549},
+  year      = {2026},
+  issn      = {2352-7110},
+  doi       = {https://doi.org/10.1016/j.softx.2026.102549},
+  url       = {https://www.sciencedirect.com/science/article/pii/S2352711026000439},
+  author    = {Borkowski, Cedric and Abrami, Giuseppe and Terefe, Dawit and Baumartz, Daniel
+               and Mehler, Alexander},
+  keywords  = {duui, neglab, core, core_b05, core_c08, new-data-spaces, circlet},
+  abstract  = {Distributed processing of unstructured text data is a challenge
+               in the rapidly changing and evolving natural language processing
+               (NLP) landscape. This landscape is characterized by heterogeneous
+               systems, models, and formats, and especially by the increasing
+               influence of AI systems. While many of these systems handle text
+               data, there are also unified systems that process multiple input
+               and output formats, while allowing for distributed corpus processing.
+               However, there are hardly any user-friendly interfaces that allow
+               existing NLP frameworks to be used flexibly and extended in a
+               user-controlled manner. Due to this gap and the increasing importance
+               of NLP for various scientific disciplines, there has been a demand
+               for a web and API based flexible software solution for deploying,
+               managing and monitoring NLP systems. Such a solution is provided
+               by Docker Unified UIMA-gateway. We introduce DUUIgateway and evaluate
+               its API and user-driven approach to encapsulation. We also describe
+               how these features improve the usability and accessibility of
+               the NLP framework DUUI. We illustrate DUUIgateway in the field
+               of process modeling in higher education and show how it closes
+               the latter gap in NLP by making a variety of systems for processing
+               text and multimodal data accessible to non-experts.}
+}
+
+@inproceedings{Luecking:Hammerla:Mehler:2026,
+  author    = {Lücking, Andy and Hammerla, Leon and Mehler, Alexander},
+  title     = {Not every quantifier can be negated},
+  booktitle = {Proceedings of \textit{Sinn und Bedeutung}, Special Session ``Philosophical
+               and Linguistic Approaches to Negation (PhilLingNeg)''},
+  series    = {SuB'30},
+  location  = {Frankfurt am Main},
+  year      = {2026},
+  pubstate  = {forthcoming},
+  keywords  = {neglab},
+  note      = {accepted}
+}
+
+@techreport{Bahmanian:et:al:2025,
+  author    = {Bahmanian, Nasimeh and Martinez Bruera, Mercedes and Lücking, Andy
+               and Hammerla, Leon and Abrami, Giuseppe and Sailer, Manfred and Mehler, Alexander
+               and Lago, Sol},
+  title     = {Data management protocol for CRC 1629},
+  institution = {CRC 1629 NegLaB - INF},
+  year      = {2025},
+  number    = {1},
+  keywords  = {neglab},
+  url       = {https://next.hessenbox.de/index.php/s/zQYBAfeXTJSDaib}
+}
+
+@inproceedings{Hammerla:et:al:2025b,
+  title     = {{D}-Neg: Syntax-Aware Graph Reasoning for Negation Detection},
+  author    = {Hammerla, Leon Lukas and L{\"u}cking, Andy and Reinert, Carolin
+               and Mehler, Alexander},
+  editor    = {Inui, Kentaro and Sakti, Sakriani and Wang, Haofen and Wong, Derek F.
+               and Bhattacharyya, Pushpak and Banerjee, Biplab and Ekbal, Asif and Chakraborty, Tanmoy
+               and Singh, Dhirendra Pratap},
+  booktitle = {Proceedings of the 14th International Joint Conference on Natural
+               Language Processing and the 4th Conference of the Asia-Pacific
+               Chapter of the Association for Computational Linguistics},
+  month     = {dec},
+  year      = {2025},
+  address   = {Mumbai, India},
+  publisher = {The Asian Federation of Natural Language Processing and The Association for Computational Linguistics},
+  url       = {https://aclanthology.org/2025.findings-ijcnlp.89/},
+  doi       = {10.18653/v1/2025.findings-ijcnlp.89},
+  pages     = {1432--1454},
+  isbn      = {979-8-89176-303-6},
+  abstract  = {Despite the communicative importance of negation, its detection
+               remains challenging. Previous approaches perform poorly in out-of-domain
+               scenarios, and progress outside of English has been slow due to
+               a lack of resources and robust models. To address this gap, we
+               present D-Neg: a syntax-aware graph reasoning model based on a
+               transformer that incorporates syntactic embeddings by attention-gating.
+               D-Neg uses graph attention to represent syntactic structures,
+               emulating the effectiveness of rule-based dependency approaches
+               for negation detection. We train D-Neg using 7 English resources
+               and their translations into 10 languages, all aligned at the annotation
+               level. We conduct an evaluation of all these datasets in in-domain
+               and out-of-domain settings. Our work represents a significant
+               advance in negation detection, enabling more effective cross-lingual
+               research.},
+  keywords  = {neglab}
+}
+
+@inproceedings{Hammerla:et:al:2025a,
+  title     = {Standardizing Heterogeneous Corpora with {DUUR}: A Dual Data-
+               and Process-Oriented Approach to Enhancing {NLP} Pipeline Integration},
+  author    = {Hammerla, Leon Lukas and Mehler, Alexander and Abrami, Giuseppe},
+  editor    = {Inui, Kentaro and Sakti, Sakriani and Wang, Haofen and Wong, Derek F.
+               and Bhattacharyya, Pushpak and Banerjee, Biplab and Ekbal, Asif and Chakraborty, Tanmoy
+               and Singh, Dhirendra Pratap},
+  booktitle = {Proceedings of the 14th International Joint Conference on Natural
+               Language Processing and the 4th Conference of the Asia-Pacific
+               Chapter of the Association for Computational Linguistics},
+  month     = {dec},
+  year      = {2025},
+  address   = {Mumbai, India},
+  publisher = {The Asian Federation of Natural Language Processing and The Association for Computational Linguistics},
+  url       = {https://aclanthology.org/2025.findings-ijcnlp.87/},
+  doi       = {10.18653/v1/2025.findings-ijcnlp.87},
+  pages     = {1410--1425},
+  isbn      = {979-8-89176-303-6},
+  abstract  = {Despite their success, LLMs are too computationally expensive
+               to replace task- or domain-specific NLP systems. However, the
+               variety of corpus formats makes reusing these systems difficult.
+               This underscores the importance of maintaining an interoperable
+               NLP landscape. We address this challenge by pursuing two objectives:
+               standardizing corpus formats and enabling massively parallel corpus
+               processing. We present a unified conversion framework embedded
+               in a massively parallel, microservice-based, programming language-independent
+               NLP architecture designed for modularity and extensibility. It
+               allows for the integration of external NLP conversion tools and
+               supports the addition of new components that meet basic compatibility
+               requirements. To evaluate our dual data- and process-oriented
+               approach to standardization, we (1) benchmark its efficiency in
+               terms of processing speed and memory usage, (2) demonstrate the
+               benefits of standardized corpus formats for NLP downstream tasks,
+               and (3) illustrate the advantages of incorporating custom formats
+               into a corpus format ecosystem.},
+  keywords  = {neglab,duui}
+}
+
+@inproceedings{Bundan:Abrami:Mehler:2025,
+  author    = {Bundan, Daniel and Abrami, Giuseppe and Mehler, Alexander},
+  title     = {Multimodal Docker Unified {UIMA} Interface: New Horizons for Distributed
+               Microservice-Oriented Processing of Corpora using {UIMA}},
+  booktitle = {Proceedings of the 21st Conference on Natural Language Processing
+               (KONVENS 2025): Long and Short Papers},
+  year      = {2025},
+  editor    = {Wartena, Christian and Heid, Ulrich},
+  location  = {Hildesheim, Germany},
+  address   = {Hannover, Germany},
+  publisher = {HsH Applied Academics},
+  pages     = {257--268},
+  series    = {KONVENS '25},
+  url       = {https://aclanthology.org/2025.konvens-1.22/},
+  pdf       = {https://aclanthology.org/2025.konvens-1.22.pdf},
+  poster    = {https://www.texttechnologylab.org/wp-content/uploads/2025/09/Poster_Multimodal_DUUI_KONVENS_2025.pdf},
+  keywords  = {duui,neglab,new-data-spaces,circlet}
+}
+
+@article{Luecking:Ginzburg:2025-exceptions,
+  author    = {Lücking, Andy and Ginzburg, Jonathan},
+  title     = {Exceptions From Rules and Noteworthy Exceptions},
+  subtitle  = {The Balance Scale for Making Exceptions},
+  journal   = {Linguistics and Philosophy},
+  year      = {2025},
+  volume    = {48},
+  pages     = {371-409},
+  url       = {https://doi.org/10.1007/s10988-024-09429-1},
+  doi       = {10.1007/s10988-024-09429-1},
+  keywords  = {gemdis,neglab}
+}
+
+@article{Abrami:et:al:2025:a,
+  title     = {Docker Unified UIMA Interface: New perspectives for NLP on big data},
+  journal   = {SoftwareX},
+  volume    = {29},
+  pages     = {102033},
+  year      = {2025},
+  issn      = {2352-7110},
+  doi       = {https://doi.org/10.1016/j.softx.2024.102033},
+  url       = {https://www.sciencedirect.com/science/article/pii/S2352711024004047},
+  author    = {Giuseppe Abrami and Markos Genios and Filip Fitzermann and Daniel Baumartz
+               and Alexander Mehler},
+  keywords  = {Docker, Kubernetes, UIMA, Distributed NLP, duui, biofid, neglab, new-data-spaces, circlet, core, core_c08},
+  abstract  = {Processing large amounts of natural language text using machine
+               learning-based models is becoming important in many disciplines.
+               This demand is being met by a variety of approaches, resulting
+               in the heterogeneous deployment of separate, partly incompatible,
+               not natively scalable applications. To overcome the technological
+               bottleneck involved, we have developed Docker Unified UIMA Interface,
+               a system for the standardized, parallel, platform-independent,
+               distributed and microservices-based solution for processing large
+               and extensive text corpora with any NLP method. We present DUUI
+               as a framework that enables automated orchestration of GPU-based
+               NLP processes beyond the existing Docker Swarm cluster variant,
+               and in addition to the adaptation to new runtime environments
+               such as Kubernetes. Therefore, a new driver for DUUI is introduced,
+               which enables the lightweight orchestration of DUUI processes
+               within a Kubernetes environment in a scalable setup. In this way,
+               the paper opens up novel text-technological perspectives for existing
+               practices in disciplines that deal with the scientific analysis
+               of large amounts of data based on NLP.}
+}
+
+@project{sfb-neglab,
+  name      = {Negation in Language and Beyond (NegLaB)},
+  abstract  = {Negation is a fundamental and unique property of human language
+               since it allows us to reason about what is not the case. It does
+               not only express a clearly defined grammatical function, it also
+               interacts with various aspects of grammar and cognition. The acquisition
+               and processing of negation encompass linguistic as well as non-linguistic
+               cognitive procedures. Hence, negation constitutes an ideal testing
+               ground to differentiate cognitive mechanisms that are grammatical
+               in nature from those that are shared with other cognitive domains,
+               such as memory, attention, decision making and cognitive control.
+               We intend to explore how the expression of negation is cross-linguistically
+               associated with grammatical and non-linguistic cognitive operations
+               and also whether the operations observed in negative utterances
+               are part of negation itself or, rather, arises as an effect of
+               the grammatical system and cognitive functions. While the semantics
+               of negation is generally analyzed as a unique propositional operator,
+               its morphosyntactic expression is much more varied and often involves
+               more than one morphological exponent. Hence, there is a tension
+               between a rich morphosyntax and a more straightforward semantics.
+               The semantics of negation leads one to expect negation to be expressed
+               by a single morpheme positioned at the beginning of the clause
+               (Neg-Only Hypothesis). The rich and variable morphosyntax leads
+               us to expect that negation requires a number of conditions in
+               the semantics (Neg-Plus Hypothesis). We aim to solve this puzzle
+               covering several empirical domains. More grammatical effects than
+               semantics would lead us to expect are visible in the interaction
+               between negative utterances and the cognitive processing and semantic
+               evaluation of alternative propositions. This is reflected in acquisition,
+               since children produce negative utterances relatively early, but
+               all the aspects of negation take a rather long time to be acquired.
+               Downstream effects of this can be seen in adult processing as
+               the comprehension of negative sentences is costlier than for positive
+               sentences. This is supposedly due to the inhibition of the corresponding
+               positive sentence that is necessary for the interpretation of
+               negative statements. Our exploration into the way negation and
+               other grammatical categories or non-linguistic cognitive functions
+               interact will lead us to identify how negation functions in natural
+               language and how it favors or hinders other (extra-)grammatical
+               components or processes. Why do some of them need to occur together
+               with negation (e.g., negative polarity items) and why are others
+               incompatible with it (as some types of imperatives)? Our general
+               aim is to develop a theoretical perspective on the way negation
+               manifests itself in natural language, how it is acquired and processed,
+               and why it varies so much across languages. Thereby, we will gain
+               a better understanding of the connections between linguistic competence
+               and general cognition.},
+  year      = {2024},
+  keywords  = {current_project, neglab},
+  funded_by = {DFG (SFB 1629)},
+  funded_by_url = {https://gepris.dfg.de/gepris/projekt/509468465?language=en},
+  url       = {https://www.neglab.de/},
+  logo      = {wp-content/uploads/2025/12/logo-NegLaB.png}
+}
