@@ -315,7 +315,7 @@ def _page_shell(
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="description" content="{_escape(value=description)}">
-  <meta name="theme-color" content="#202d69">
+  <meta name="theme-color" content="#006d96">
   <title>{_escape(value=title)}</title>
   <link rel="stylesheet" href="{asset_prefix}assets/site.css?v={_escape(value=asset_version)}">
 </head>
@@ -453,11 +453,13 @@ def render_index(
     publication_count = sum(publication["entry_type"] != "project" for publication in publications)
     body = f"""
 <section class="hero">
-  <div class="eyebrow">CRC 1629 · Negation in Language and Beyond</div>
-  <h1>{_escape(value=project_subtitle)}</h1>
-  <p>Projects and research outputs from the INF subproject, building sustainable data, tools, and methods for collaborative research on negation.</p>
-  <a class="button button-primary" href="#projects">Browse projects {_icon(name='arrow')}</a>
-  <div class="hero-orbit" aria-hidden="true"><span></span><span></span><span></span></div>
+  <div class="hero-copy">
+    <div class="eyebrow">CRC 1629 · Negation in Language and Beyond</div>
+    <h1>{_escape(value=project_subtitle)}</h1>
+    <p>Projects and research outputs from the INF subproject, building sustainable data, tools, and methods for collaborative research on negation.</p>
+    <a class="button button-primary" href="#projects">Browse projects {_icon(name='arrow')}</a>
+  </div>
+  <div class="hero-logo"><img src="assets/inf_logo.svg" alt="INF — Information Infrastructure"></div>
 </section>
 <section class="stats" aria-label="Project statistics">
   <div><strong>{len(publications)}</strong><span>Projects</span></div>
@@ -571,7 +573,7 @@ def _sort_publications(*, publications: Iterable[dict[str, object]]) -> list[dic
     return sorted(publications, key=sort_key)
 
 
-def _write_assets(*, docs_dir: Path, source_root: Path) -> None:
+def _write_assets(*, docs_dir: Path, logo_path: Path, source_root: Path) -> None:
     assets_dir = docs_dir / "assets"
     assets_dir.mkdir(parents=True, exist_ok=True)
     for name in ("site.css", "site.js"):
@@ -579,6 +581,9 @@ def _write_assets(*, docs_dir: Path, source_root: Path) -> None:
         if not source.exists():
             raise FileNotFoundError(f"Required site asset is missing: {source}")
         shutil.copyfile(source, assets_dir / name)
+    if not logo_path.is_file():
+        raise FileNotFoundError(f"INF logo is missing: {logo_path}")
+    shutil.copyfile(logo_path, assets_dir / "inf_logo.svg")
 
 
 def _asset_version(*, source_root: Path) -> str:
@@ -599,6 +604,7 @@ def generate_site_from_entries(
     project_name: str,
     project_subtitle: str,
     project_data_path: Path,
+    logo_path: Path,
     source_root: Path,
 ) -> dict[str, int]:
     """Rebuild the complete site from parsed BibTeX entries and homepage data."""
@@ -618,7 +624,7 @@ def generate_site_from_entries(
 
     asset_version = _asset_version(source_root=source_root)
     project_data = load_inf_project_data(path=project_data_path)
-    _write_assets(docs_dir=docs_dir, source_root=source_root)
+    _write_assets(docs_dir=docs_dir, logo_path=logo_path, source_root=source_root)
     for publication in publications:
         target = publication_dir / str(publication["filename"])
         rendered_page = render_detail(
@@ -668,6 +674,7 @@ def build_site(
     project_name: str,
     project_subtitle: str,
     project_data_path: Path,
+    logo_path: Path,
     source_root: Path,
 ) -> dict[str, int]:
     """Read one BibTeX file and rebuild the complete project catalogue."""
@@ -678,6 +685,7 @@ def build_site(
         project_name=project_name,
         project_subtitle=project_subtitle,
         project_data_path=project_data_path,
+        logo_path=logo_path,
         source_root=source_root,
     )
 
@@ -708,11 +716,13 @@ def _argument_parser(
     default_docs_dir: Path,
     default_bib_path: Path,
     default_project_data_path: Path,
+    default_logo_path: Path,
 ) -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="Rebuild the GitHub Pages project catalogue from one BibTeX file and the INF project JSON.")
     parser.add_argument("bib_file", nargs="?", type=Path, default=default_bib_path, help=f"authoritative BibTeX input (default: {default_bib_path})")
     parser.add_argument("--docs-dir", type=Path, default=default_docs_dir, help=f"site output directory (default: {default_docs_dir})")
     parser.add_argument("--project-data", type=Path, default=default_project_data_path, help=f"editable INF homepage JSON (default: {default_project_data_path})")
+    parser.add_argument("--logo", type=Path, default=default_logo_path, help=f"INF logo SVG (default: {default_logo_path})")
     parser.add_argument("--project-name", default="NegLab INF", help="short project name shown in the site header")
     parser.add_argument("--project-subtitle", default="Infrastructure for research on negation", help="main heading shown on the project index")
     return parser
@@ -724,6 +734,7 @@ def main(*, argv: Sequence[str] | None = None) -> int:
         default_docs_dir=project_root / "docs",
         default_bib_path=project_root / "data" / "neglab-inf.bib",
         default_project_data_path=project_root / "data" / "inf-project.json",
+        default_logo_path=project_root / "data" / "inf_logo.svg",
     )
     arguments = parser.parse_args(argv)
     allowed_entry_types = supported_entry_types(include_projects=True)
@@ -734,6 +745,7 @@ def main(*, argv: Sequence[str] | None = None) -> int:
         project_name=arguments.project_name,
         project_subtitle=arguments.project_subtitle,
         project_data_path=arguments.project_data,
+        logo_path=arguments.logo,
         source_root=Path(__file__).resolve().parent,
     )
     print(

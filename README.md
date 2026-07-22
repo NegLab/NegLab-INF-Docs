@@ -2,11 +2,14 @@
 
 Static GitHub Pages catalogue for projects and publications of the INF
 subproject of CRC 1629 NegLaB. The complete site is generated with
-dependency-free Python from two manually maintained source files:
+dependency-free Python from two manually maintained content files and one logo
+asset:
 
 - `data/neglab-inf.bib` contains projects, publications, and their links.
 - `data/inf-project.json` contains the INF description, services, research
   areas, related links, contact text, and people.
+- `data/inf_logo.svg` is the INF logo displayed in the homepage hero and
+  defines the blue and pink site palette.
 
 The generator only reads these inputs. It never edits or merges BibTeX data.
 Everything under `docs/` is generated output and is replaced on every build.
@@ -93,7 +96,8 @@ The build writes:
   project catalogue.
 - `docs/publications/*.html`: one detail page per supported BibTeX entry.
 - `docs/publications/index.json`: mapping from BibTeX keys to generated files.
-- `docs/assets/`: the stylesheet and JavaScript used by GitHub Pages.
+- `docs/assets/`: the stylesheet, JavaScript, and copied INF logo used by
+  GitHub Pages.
 - `docs/.nojekyll`: disables unnecessary Jekyll processing.
 
 Asset URLs contain a content hash so browsers and GitHub Pages do not retain an

@@ -92,6 +92,7 @@ class PublicationToolTests(unittest.TestCase):
             project_name="Test INF",
             project_subtitle="Test projects",
             project_data_path=self._write_project_data(root=root),
+            logo_path=Path(__file__).resolve().parent.parent / "data/inf_logo.svg",
             source_root=self._source_root(root=root),
         )
 
@@ -119,7 +120,9 @@ class PublicationToolTests(unittest.TestCase):
             )
             self.assertEqual(bibliography.read_bytes(), bib_before)
             self.assertEqual(project_data.read_bytes(), json_before)
+            self.assertTrue((root / "docs/assets/inf_logo.svg").is_file())
             index = (root / "docs/index.html").read_text(encoding="utf-8")
+            self.assertIn('src="assets/inf_logo.svg"', index)
             self.assertIn("<strong>2</strong><span>Projects</span>", index)
             self.assertIn("<strong>1</strong><span>Publications</span>", index)
             self.assertIn("Editable project description.", index)
