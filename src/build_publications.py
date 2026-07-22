@@ -120,27 +120,6 @@ def parse_bibtex(*, text: str, source: str) -> list[dict[str, object]]:
     return entries
 
 
-def render_bibtex_entry(*, entry: dict[str, object]) -> str:
-    """Render one parsed entry in a stable, human-editable BibTeX format."""
-    fields = entry.get("fields")
-    if not isinstance(fields, dict):
-        raise TypeError("BibTeX fields must be a dictionary")
-    lines = [f'@{entry["entry_type"]}{{{entry["bib_key"]},']
-    field_items = [(str(name), str(value)) for name, value in fields.items()]
-    width = max((len(name) for name, _ in field_items), default=0)
-    for name, value in field_items:
-        lines.append(f"  {name.ljust(width)} = {{{value}}},")
-    lines.append("}")
-    return "\n".join(lines)
-
-
-def write_bibtex_database(*, path: Path, entries: Sequence[dict[str, object]]) -> None:
-    """Write parsed entries to the authoritative BibTeX database."""
-    path.parent.mkdir(parents=True, exist_ok=True)
-    content = "\n\n".join(str(entry.get("raw_bibtex") or render_bibtex_entry(entry=entry)).strip() for entry in entries)
-    path.write_text(f"{content}\n" if content else "", encoding="utf-8")
-
-
 def read_bibtex_file(*, path: Path) -> list[dict[str, object]]:
     if not path.is_file():
         raise FileNotFoundError(f"BibTeX file not found: {path}")
@@ -152,53 +131,6 @@ def read_bibtex_file(*, path: Path) -> list[dict[str, object]]:
             raise ValueError(f"Duplicate BibTeX key {bib_key!r} in {path}")
         seen.add(bib_key)
     return entries
-
-
-def merge_bibtex_database(
-    *,
-    database_path: Path,
-    import_paths: Sequence[Path],
-    update_existing: bool,
-    full_rebuild: bool,
-) -> tuple[list[dict[str, object]], dict[str, object]]:
-    """Merge import files into the database, optionally replacing matching keys."""
-    if full_rebuild or not database_path.exists():
-        database_entries: list[dict[str, object]] = []
-    else:
-        database_entries = read_bibtex_file(path=database_path)
-
-    positions = {str(entry["bib_key"]): position for position, entry in enumerate(database_entries)}
-    added_keys: set[str] = set()
-    updated_keys: set[str] = set()
-    kept_keys: set[str] = set()
-    database_resolved = database_path.resolve()
-
-    for import_path in import_paths:
-        if import_path.resolve() == database_resolved:
-            raise ValueError(f"The database itself cannot be used as an import target: {database_path}")
-        for imported_entry in read_bibtex_file(path=import_path):
-            bib_key = str(imported_entry["bib_key"])
-            if bib_key not in positions:
-                positions[bib_key] = len(database_entries)
-                database_entries.append(imported_entry)
-                added_keys.add(bib_key)
-            elif update_existing:
-                database_entries[positions[bib_key]] = imported_entry
-                if bib_key not in added_keys:
-                    updated_keys.add(bib_key)
-                kept_keys.discard(bib_key)
-            else:
-                kept_keys.add(bib_key)
-
-    write_bibtex_database(path=database_path, entries=database_entries)
-    return database_entries, {
-        "added_keys": added_keys,
-        "updated_keys": updated_keys,
-        "kept_keys": kept_keys,
-        "added": len(added_keys),
-        "updated": len(updated_keys),
-        "kept": len(kept_keys),
-    }
 
 
 def _latex_to_text(*, value: str) -> str:
@@ -331,6 +263,28 @@ def _escape(*, value: object) -> str:
     return html.escape(str(value), quote=True)
 
 
+def load_inf_project_data(*, path: Path) -> dict[str, object]:
+    """Load and validate the editable homepage data."""
+    if not path.is_file():
+        raise FileNotFoundError(f"INF project data file not found: {path}")
+    data = json.loads(path.read_text(encoding="utf-8"))
+    if not isinstance(data, dict):
+        raise ValueError(f"{path} must contain a JSON object")
+    for field in ("title", "subtitle"):
+        if not isinstance(data.get(field), str) or not str(data[field]).strip():
+            raise ValueError(f"{path}: {field!r} must be a non-empty string")
+    for field in ("description", "services", "research_areas", "related_links", "people"):
+        if not isinstance(data.get(field), list):
+            raise ValueError(f"{path}: {field!r} must be a JSON array")
+    for position, person in enumerate(data["people"]):
+        if not isinstance(person, dict):
+            raise ValueError(f"{path}: people[{position}] must be an object")
+        for field in ("name", "role"):
+            if not isinstance(person.get(field), str) or not str(person[field]).strip():
+                raise ValueError(f"{path}: people[{position}].{field} must be a non-empty string")
+    return data
+
+
 def _icon(*, name: str) -> str:
     paths = {
         "arrow": '<path d="m9 18 6-6-6-6"/>',
@@ -372,7 +326,7 @@ def _page_shell(
       <span class="brand-mark">INF</span>
       <span><strong>{_escape(value=project_name)}</strong><small>Information Infrastructure</small></span>
     </a>
-    <nav aria-label="Main navigation"><a href="{asset_prefix}index.html#projects">Projects</a><a href="https://www.neglab.de/" rel="noopener noreferrer">NegLaB {_icon(name='external')}</a></nav>
+    <nav aria-label="Main navigation"><a href="{asset_prefix}index.html#about">About</a><a href="{asset_prefix}index.html#people">People</a><a href="{asset_prefix}index.html#projects">Projects</a><a href="https://www.neglab.de/" rel="noopener noreferrer">NegLaB {_icon(name='external')}</a></nav>
   </header>
   <main id="main-content">{body}</main>
   <footer><div><strong>{_escape(value=project_name)}</strong><p>Projects and information infrastructure for collaborative negation research.</p></div><p>CRC 1629 · Goethe University Frankfurt</p></footer>
@@ -404,12 +358,91 @@ def _render_index_card(*, publication: dict[str, object]) -> str:
 </article>"""
 
 
+def _person_initials(*, name: str) -> str:
+    title_words = {"prof", "prof.", "dr", "dr.", "apl", "apl."}
+    words = [word for word in name.split() if word.casefold() not in title_words]
+    selected = words[-2:] if len(words) > 1 else words
+    return "".join(word[0].upper() for word in selected if word) or "INF"
+
+
+def _render_inf_overview(*, project_data: dict[str, object]) -> str:
+    descriptions = project_data["description"] if isinstance(project_data["description"], list) else []
+    description_html = "".join(f'<p>{_escape(value=paragraph)}</p>' for paragraph in descriptions if isinstance(paragraph, str))
+
+    research_areas = project_data["research_areas"] if isinstance(project_data["research_areas"], list) else []
+    area_html = "".join(f'<span>{_escape(value=area)}</span>' for area in research_areas if isinstance(area, str))
+
+    services = project_data["services"] if isinstance(project_data["services"], list) else []
+    service_cards: list[str] = []
+    for service in services:
+        if not isinstance(service, dict):
+            continue
+        name = str(service.get("name", "Service"))
+        items = service.get("items", [])
+        item_html = "".join(f'<li>{_escape(value=item)}</li>' for item in items if isinstance(item, str)) if isinstance(items, list) else ""
+        service_cards.append(f'<article class="service-card"><h3>{_escape(value=name)}</h3><ul>{item_html}</ul></article>')
+
+    related_links = project_data["related_links"] if isinstance(project_data["related_links"], list) else []
+    link_html = "".join(
+        f'<a href="{_escape(value=link.get("url", ""))}" rel="noopener noreferrer">{_escape(value=link.get("label", "Related research"))} {_icon(name="external")}</a>'
+        for link in related_links
+        if isinstance(link, dict) and _valid_web_url(url=str(link.get("url", "")))
+    )
+    source = project_data.get("source", {})
+    source_url = str(source.get("url", "")) if isinstance(source, dict) else ""
+    source_link = (
+        f'<a class="source-link" href="{_escape(value=source_url)}" rel="noopener noreferrer">Official INF project page {_icon(name="external")}</a>'
+        if _valid_web_url(url=source_url)
+        else ""
+    )
+
+    people = project_data["people"] if isinstance(project_data["people"], list) else []
+    role_groups: dict[str, list[dict[str, object]]] = {}
+    for person in people:
+        if isinstance(person, dict):
+            role_groups.setdefault(str(person["role"]), []).append(person)
+    people_groups: list[str] = []
+    for role, members in role_groups.items():
+        cards: list[str] = []
+        for person in members:
+            name = str(person["name"])
+            affiliation = str(person.get("affiliation", "")).strip()
+            profile_url = str(person.get("profile_url", "")).strip()
+            name_html = _escape(value=name)
+            if _valid_web_url(url=profile_url):
+                name_html = f'<a href="{_escape(value=profile_url)}" rel="noopener noreferrer">{name_html} {_icon(name="external")}</a>'
+            affiliation_html = f'<p>{_escape(value=affiliation)}</p>' if affiliation else ""
+            cards.append(
+                f'<article class="person-card"><div class="person-initials" aria-hidden="true">{_escape(value=_person_initials(name=name))}</div>'
+                f'<div><span>{_escape(value=role)}</span><h3>{name_html}</h3>{affiliation_html}</div></article>'
+            )
+        people_groups.append(f'<div class="people-group"><h3>{_escape(value=role)}</h3><div class="people-grid">{"".join(cards)}</div></div>')
+
+    contact = str(project_data.get("contact", "")).strip()
+    contact_html = f'<p class="contact-note">{_escape(value=contact)}</p>' if contact else ""
+    return f"""
+<section class="about-section" id="about">
+  <div class="section-heading"><div><span class="eyebrow">About the subproject</span><h2>{_escape(value=project_data['title'])}</h2></div><p>{_escape(value=project_data['subtitle'])}</p></div>
+  <div class="about-grid">
+    <div class="about-copy">{description_html}<div class="related-links">{link_html}</div>{source_link}</div>
+    <aside class="research-areas"><span class="eyebrow">Research areas</span><div>{area_html}</div></aside>
+  </div>
+  <div class="services-grid">{"".join(service_cards)}</div>{contact_html}
+</section>
+<section class="people-section" id="people">
+  <div class="section-heading"><div><span class="eyebrow">The INF team</span><h2>People</h2></div><p>Project leadership and scientific staff supporting research across the CRC.</p></div>
+  {''.join(people_groups)}
+</section>
+"""
+
+
 def render_index(
     *,
     publications: list[dict[str, object]],
     project_name: str,
     project_subtitle: str,
     asset_version: str,
+    project_data: dict[str, object],
 ) -> str:
     years = sorted({str(publication["year"]) for publication in publications}, reverse=True)
     types = sorted({(str(publication["entry_type"]), str(publication["type_label"])) for publication in publications}, key=lambda item: item[1])
@@ -432,6 +465,7 @@ def render_index(
   <div><strong>{author_count}</strong><span>Contributors</span></div>
   <div><strong>{len(years)}</strong><span>Years represented</span></div>
 </section>
+{_render_inf_overview(project_data=project_data)}
 <section class="publication-section" id="projects">
   <div class="section-heading"><div><span class="eyebrow">INF catalogue</span><h2>Projects</h2></div><p>Explore the INF subproject’s software, repositories, data resources, articles, conference papers, and technical reports.</p></div>
   <div class="filters" role="search">
@@ -494,7 +528,7 @@ def render_detail(*, publication: dict[str, object], project_name: str, asset_ve
         actions.append(f'<a class="button button-primary" href="{_escape(value=publication["url"])}" rel="noopener noreferrer">{_icon(name="external")} {action_label}</a>')
     if publication["pdf"]:
         actions.append(f'<a class="button button-secondary" href="{_escape(value=publication["pdf"])}" rel="noopener noreferrer">{_icon(name="file")} PDF</a>')
-    actions.append(f'<!-- PUBLICATION_LINK_START -->{render_repository_link(url=str(publication["projectlink"]))}<!-- PUBLICATION_LINK_END -->')
+    actions.append(render_repository_link(url=str(publication["projectlink"])))
     abstract = str(publication["abstract"])
     abstract_section = f'<section class="paper-section"><h2>Abstract</h2><p class="abstract">{_escape(value=abstract)}</p></section>' if abstract else '<section class="paper-section muted-section"><h2>Abstract</h2><p>No abstract is available in the bibliography.</p></section>'
     keyword_html = "".join(f'<span>{_escape(value=keyword)}</span>' for keyword in keywords)
@@ -561,13 +595,13 @@ def generate_site_from_entries(
     *,
     entries: Sequence[dict[str, object]],
     docs_dir: Path,
-    full_rebuild: bool,
     allowed_entry_types: frozenset[str],
     project_name: str,
     project_subtitle: str,
+    project_data_path: Path,
     source_root: Path,
 ) -> dict[str, int]:
-    """Generate the site from the current authoritative database entries."""
+    """Rebuild the complete site from parsed BibTeX entries and homepage data."""
     publications = _sort_publications(
         publications=(
             _entry_to_publication(entry=entry)
@@ -575,18 +609,16 @@ def generate_site_from_entries(
             if str(entry["entry_type"]) in allowed_entry_types
         )
     )
+    if docs_dir.exists():
+        if not docs_dir.is_dir():
+            raise NotADirectoryError(f"Site output path is not a directory: {docs_dir}")
+        shutil.rmtree(docs_dir)
     publication_dir = docs_dir / "publications"
-    publication_dir.mkdir(parents=True, exist_ok=True)
-
-    if full_rebuild:
-        for generated_page in publication_dir.glob("*.html"):
-            if '<meta name="bib-key"' in generated_page.read_text(encoding="utf-8"):
-                generated_page.unlink()
+    publication_dir.mkdir(parents=True)
 
     asset_version = _asset_version(source_root=source_root)
+    project_data = load_inf_project_data(path=project_data_path)
     _write_assets(docs_dir=docs_dir, source_root=source_root)
-    generated = 0
-    skipped = 0
     for publication in publications:
         target = publication_dir / str(publication["filename"])
         rendered_page = render_detail(
@@ -594,19 +626,15 @@ def generate_site_from_entries(
             project_name=project_name,
             asset_version=asset_version,
         )
-        if target.exists() and target.read_text(encoding="utf-8") == rendered_page:
-            skipped += 1
-            continue
         target.write_text(rendered_page, encoding="utf-8")
-        generated += 1
 
-    docs_dir.mkdir(parents=True, exist_ok=True)
     (docs_dir / "index.html").write_text(
         render_index(
             publications=publications,
             project_name=project_name,
             project_subtitle=project_subtitle,
             asset_version=asset_version,
+            project_data=project_data,
         ),
         encoding="utf-8",
     )
@@ -625,70 +653,33 @@ def generate_site_from_entries(
     (publication_dir / "index.json").write_text(json.dumps(manifest, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     (docs_dir / ".nojekyll").touch()
     return {
-        "generated": generated,
-        "skipped": skipped,
+        "generated": len(publications),
         "total": len(publications),
         "publications": sum(publication["entry_type"] != "project" for publication in publications),
         "ignored": len(entries) - len(publications),
     }
 
 
-def generate_site_from_database(
-    *,
-    database_path: Path,
-    docs_dir: Path,
-    full_rebuild: bool,
-    allowed_entry_types: frozenset[str],
-    project_name: str,
-    project_subtitle: str,
-    source_root: Path,
-) -> dict[str, int]:
-    entries = read_bibtex_file(path=database_path) if database_path.exists() else []
-    return generate_site_from_entries(
-        entries=entries,
-        docs_dir=docs_dir,
-        full_rebuild=full_rebuild,
-        allowed_entry_types=allowed_entry_types,
-        project_name=project_name,
-        project_subtitle=project_subtitle,
-        source_root=source_root,
-    )
-
-
 def build_site(
     *,
-    bib_paths: Sequence[Path],
-    database_path: Path,
-    update_existing: bool,
+    bib_path: Path,
     docs_dir: Path,
-    full_rebuild: bool,
     allowed_entry_types: frozenset[str],
     project_name: str,
     project_subtitle: str,
+    project_data_path: Path,
     source_root: Path,
 ) -> dict[str, int]:
-    """Merge imports into the database and generate its project catalogue."""
-    entries, merge_result = merge_bibtex_database(
-        database_path=database_path,
-        import_paths=bib_paths,
-        update_existing=update_existing,
-        full_rebuild=full_rebuild,
-    )
-    site_result = generate_site_from_entries(
-        entries=entries,
+    """Read one BibTeX file and rebuild the complete project catalogue."""
+    return generate_site_from_entries(
+        entries=read_bibtex_file(path=bib_path),
         docs_dir=docs_dir,
-        full_rebuild=full_rebuild,
         allowed_entry_types=allowed_entry_types,
         project_name=project_name,
         project_subtitle=project_subtitle,
+        project_data_path=project_data_path,
         source_root=source_root,
     )
-    return {
-        **site_result,
-        "added": int(merge_result["added"]),
-        "updated": int(merge_result["updated"]),
-        "kept": int(merge_result["kept"]),
-    }
 
 
 def supported_entry_types(*, include_projects: bool = True) -> frozenset[str]:
@@ -712,13 +703,16 @@ def supported_entry_types(*, include_projects: bool = True) -> frozenset[str]:
     return frozenset(entry_types)
 
 
-def _argument_parser(*, default_docs_dir: Path, default_database_path: Path) -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(description="Generate a GitHub Pages project catalogue from one or more BibTeX files.")
-    parser.add_argument("bib_files", nargs="*", type=Path, help="BibTeX file(s) to merge into the database; omit to rebuild docs from the database")
-    parser.add_argument("--database", type=Path, default=default_database_path, help=f"authoritative BibTeX database (default: {default_database_path})")
+def _argument_parser(
+    *,
+    default_docs_dir: Path,
+    default_bib_path: Path,
+    default_project_data_path: Path,
+) -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(description="Rebuild the GitHub Pages project catalogue from one BibTeX file and the INF project JSON.")
+    parser.add_argument("bib_file", nargs="?", type=Path, default=default_bib_path, help=f"authoritative BibTeX input (default: {default_bib_path})")
     parser.add_argument("--docs-dir", type=Path, default=default_docs_dir, help=f"site output directory (default: {default_docs_dir})")
-    parser.add_argument("--update", action="store_true", help="replace database entries whose BibTeX keys occur in an import file")
-    parser.add_argument("--full-rebuild", action="store_true", help="wipe the database before importing and rebuild every generated project page")
+    parser.add_argument("--project-data", type=Path, default=default_project_data_path, help=f"editable INF homepage JSON (default: {default_project_data_path})")
     parser.add_argument("--project-name", default="NegLab INF", help="short project name shown in the site header")
     parser.add_argument("--project-subtitle", default="Infrastructure for research on negation", help="main heading shown on the project index")
     return parser
@@ -728,25 +722,24 @@ def main(*, argv: Sequence[str] | None = None) -> int:
     project_root = Path(__file__).resolve().parent.parent
     parser = _argument_parser(
         default_docs_dir=project_root / "docs",
-        default_database_path=project_root / "data" / "neglab-inf.bib",
+        default_bib_path=project_root / "data" / "neglab-inf.bib",
+        default_project_data_path=project_root / "data" / "inf-project.json",
     )
     arguments = parser.parse_args(argv)
     allowed_entry_types = supported_entry_types(include_projects=True)
     result = build_site(
-        bib_paths=arguments.bib_files,
-        database_path=arguments.database,
-        update_existing=arguments.update,
+        bib_path=arguments.bib_file,
         docs_dir=arguments.docs_dir,
-        full_rebuild=arguments.full_rebuild,
         allowed_entry_types=allowed_entry_types,
         project_name=arguments.project_name,
         project_subtitle=arguments.project_subtitle,
+        project_data_path=arguments.project_data,
         source_root=Path(__file__).resolve().parent,
     )
     print(
-        f"Database: {result['added']} added, {result['updated']} updated, {result['kept']} kept. "
-        f"Site: {result['total']} projects and outputs ({result['publications']} publications), "
-        f"{result['generated']} pages written, {result['skipped']} unchanged, {result['ignored']} unsupported entries ignored."
+        f"Rebuilt site from {arguments.bib_file}: {result['total']} projects and outputs "
+        f"({result['publications']} publications), {result['generated']} detail pages written, "
+        f"{result['ignored']} unsupported entries ignored."
     )
     return 0
 

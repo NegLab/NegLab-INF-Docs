@@ -1,134 +1,105 @@
 # NegLab INF project catalogue
 
 Static GitHub Pages catalogue for projects and publications of the INF
-subproject of CRC 1629 NegLaB. The site is generated from an authoritative
-BibTeX database using dependency-free Python.
+subproject of CRC 1629 NegLaB. The complete site is generated with
+dependency-free Python from two manually maintained source files:
 
-## Repository workflow
+- `data/neglab-inf.bib` contains projects, publications, and their links.
+- `data/inf-project.json` contains the INF description, services, research
+  areas, related links, contact text, and people.
 
-`data/neglab-inf.bib` is the database and the single source of truth for the
-website. Files passed on the command line are import files: they are merged
-into the database by BibTeX key, and the site under `docs/` is then generated
-from the complete database.
+The generator only reads these inputs. It never edits or merges BibTeX data.
+Everything under `docs/` is generated output and is replaced on every build.
 
-Do not edit generated HTML to change metadata or links. Make the change in an
-import file or use `add_publication_link.py`, then regenerate.
+## Rebuilding the website
 
-### First import and adding new entries
-
-The database is created as an empty file when it does not exist. Import one or
-more BibTeX files from the repository root:
-
-```bash
-python3 src/build_publications.py incoming/projects.bib
-python3 src/build_publications.py incoming/projects.bib incoming/publications.bib
-```
-
-New keys are appended to `data/neglab-inf.bib`. If an imported key is already
-present, the database version is retained by default. Pages whose generated
-content has not changed are left untouched.
-
-### Updating existing entries
-
-Use `--update` to replace database entries with matching entries from the
-import file. The entire entry associated with that BibTeX key is replaced:
-
-```bash
-python3 src/build_publications.py --update incoming/corrections.bib
-```
-
-Entries that are not present in the import file remain unchanged. New entries
-are still added normally.
-
-### Full rebuild
-
-`--full-rebuild` is intentionally destructive: it empties the authoritative
-database first, imports only the supplied files, removes generated project
-pages that are no longer represented, and rebuilds every page.
-
-```bash
-python3 src/build_publications.py \
-  --full-rebuild \
-  incoming/complete-export.bib
-```
-
-Any database entry or `projectlink` not included in the supplied complete
-export is removed. Commit or back up `data/neglab-inf.bib` before using this
-option when its contents are not reproducible elsewhere.
-
-To regenerate the website from the database without importing anything:
+From the repository root, run:
 
 ```bash
 python3 src/build_publications.py
 ```
 
-Useful path overrides are available for testing or alternate deployments:
+This uses `data/neglab-inf.bib` and `data/inf-project.json`, deletes the
+previous generated site under `docs/`, and writes the complete site again.
+
+To build from a different BibTeX file or homepage JSON:
 
 ```bash
-python3 src/build_publications.py \
-  --database /path/to/database.bib \
-  --docs-dir /path/to/site \
-  /path/to/import.bib
+python3 src/build_publications.py /path/to/projects.bib \
+  --project-data /path/to/inf-project.json
 ```
 
-## Supported entries
-
-Standard BibTeX publication types such as `@article`, `@inproceedings`, and
-`@techreport` are supported. The catalogue also supports the project-specific
-`@project` type for software, datasets, services, repositories, and ongoing or
-unpublished work.
-
-Project entries use `name` or `title` for their heading and can provide an
-`abstract` for the project description. See
-[PROJECT_BIBTEX_SCHEMA.md](PROJECT_BIBTEX_SCHEMA.md) for the complete proposed
-schema and an example.
-
-Every supported entry receives a stable, collision-resistant filename under
-`docs/publications/`, derived from its BibTeX key. Duplicate keys inside a
-single import file stop the import with an error.
-
-## Code and archive links
-
-Store a GitHub, GitLab, Zenodo, OSF, or other archival URL by its exact BibTeX
-key:
+An alternate output directory can be useful for previews:
 
 ```bash
-python3 src/add_publication_link.py \
-  'Hammerla:et:al:2025b' \
-  'https://github.com/example/d-neg'
+python3 src/build_publications.py --docs-dir /tmp/neglab-inf-preview
 ```
 
-The tool writes or replaces the `projectlink` field directly in
-`data/neglab-inf.bib` and then regenerates the documentation. It never patches
-the generated HTML directly.
+The selected output directory is replaced completely during the build.
 
-Remove the field and restore the empty website placeholder with:
+## Editing projects and publications
 
-```bash
-python3 src/add_publication_link.py --remove 'Hammerla:et:al:2025b'
+Edit `data/neglab-inf.bib` directly. Standard BibTeX publication types such as
+`@article`, `@inproceedings`, and `@techreport` are supported. The catalogue
+also accepts the project-specific `@project` type for software, datasets,
+services, repositories, and ongoing or unpublished work.
+
+Each entry must have a unique BibTeX key. That key determines its stable,
+collision-resistant filename under `docs/publications/`. Duplicate keys stop
+the build with an error.
+
+For code or archive links, manually add a `projectlink` field to the entry:
+
+```bibtex
+projectlink = {https://github.com/example/project},
 ```
 
-An imported entry that already contains `projectlink` is handled in exactly the
-same way. The distinction between link fields is:
+The link fields have distinct uses:
 
 - `url`: primary project or publication landing page, shown as “Visit project”
   or “View publication”.
 - `projectlink`: code repository or archival record, shown as “Code & archive”.
-- `pdf`: direct PDF link where one exists.
+- `pdf`: direct PDF link.
+
+If `projectlink` is absent, the detail page displays an empty disabled
+placeholder. See [PROJECT_BIBTEX_SCHEMA.md](PROJECT_BIBTEX_SCHEMA.md) for the
+complete proposed `@project` schema.
+
+## Editing the homepage and people
+
+Edit `data/inf-project.json` directly. Each person is represented by an object:
+
+```json
+{
+  "name": "Example Person",
+  "role": "Scientific Staff",
+  "affiliation": "Goethe University Frankfurt",
+  "profile_url": "https://example.org/profile"
+}
+```
+
+Change `role` to regroup someone, append an object to add a person, or remove
+the object to remove them. `affiliation` and `profile_url` may be empty.
+Descriptions are arrays of paragraphs; service groups contain a `name` and an
+`items` array.
+
+After any BibTeX or JSON edit, run the normal build command again.
 
 ## Generated website
 
-The generation process writes:
+The build writes:
 
-- `docs/index.html`: searchable and filterable project catalogue.
-- `docs/publications/*.html`: one page per BibTeX key.
-- `docs/publications/index.json`: mapping from keys to generated filenames.
-- `docs/assets/`: stylesheet and JavaScript used by GitHub Pages.
+- `docs/index.html`: INF information, people, statistics, and the searchable
+  project catalogue.
+- `docs/publications/*.html`: one detail page per supported BibTeX entry.
+- `docs/publications/index.json`: mapping from BibTeX keys to generated files.
+- `docs/assets/`: the stylesheet and JavaScript used by GitHub Pages.
+- `docs/.nojekyll`: disables unnecessary Jekyll processing.
 
-Asset URLs contain a content hash. This prevents GitHub Pages or the browser
-from retaining an older color scheme after CSS changes.
+Asset URLs contain a content hash so browsers and GitHub Pages do not retain an
+older stylesheet after a rebuild.
 
-Preview the site locally:
+Preview the generated site locally:
 
 ```bash
 python3 -m http.server 8000 --directory docs
@@ -138,7 +109,7 @@ Then open <http://localhost:8000/>.
 
 ## Tests
 
-Run the importer, database, link, and rendering tests with:
+Run the parser and site-generation tests with:
 
 ```bash
 python3 -m unittest discover -s tests -v
@@ -147,5 +118,5 @@ python3 -m unittest discover -s tests -v
 ## GitHub Pages
 
 In the repository settings, select **Deploy from a branch**, choose the `main`
-branch, and use `/docs` as the folder. Commit the authoritative database,
-generator changes, and regenerated `docs/` output together.
+branch, and use `/docs` as the folder. Commit both manually maintained input
+files, generator changes, and the regenerated `docs/` output.

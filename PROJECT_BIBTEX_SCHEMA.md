@@ -32,7 +32,7 @@ infrastructure, and unpublished or ongoing projects.
 | `author` | Recommended | Contributors in normal BibTeX `and`-separated form. Both `Last, First` and `First Last` are accepted. |
 | `year` | Recommended | Start, release, or principal catalogue year. Entries without it are shown as undated. |
 | `url` | Recommended | Primary project homepage, service, documentation, or publication landing page. |
-| `projectlink` | Recommended | Source-code repository or persistent archival record. Managed by `add_publication_link.py` when desired. |
+| `projectlink` | Recommended | Source-code repository or persistent archival record. Edit this field manually in the BibTeX input. |
 | `keywords` | Recommended | Comma- or semicolon-separated terms used for display and search. |
 | `subtitle` | Optional | Short explanatory subtitle displayed below the project name. |
 | `note` | Optional | Short lifecycle label such as `active`, `beta`, `archived`, or `forthcoming`. |
@@ -48,5 +48,5 @@ infrastructure, and unpublished or ongoing projects.
 - Keep `abstract` suitable for public display and avoid LaTeX layout commands.
 - Use `url` for the project’s main destination and `projectlink` specifically
   for source code or an archival record.
-- An update import replaces the complete existing entry, so include every field
-  that should remain in the database when using `--update`.
+- Treat the BibTeX file as the authoritative source and rebuild the website
+  after every manual edit.

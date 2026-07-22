@@ -8,16 +8,22 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 
-from add_publication_link import update_publication_link
 from build_publications import build_site, parse_bibtex, supported_entry_types
 
 
 class PublicationToolTests(unittest.TestCase):
-    def _source_root(self) -> Path:
-        return Path(__file__).resolve().parent.parent / "src"
+    def _source_root(self, *, root: Path) -> Path:
+        source_root = root / "src"
+        assets = source_root / "site_assets"
+        assets.mkdir(parents=True, exist_ok=True)
+        repository_assets = Path(__file__).resolve().parent.parent / "src/site_assets"
+        for name in ("site.css", "site.js"):
+            (assets / name).write_text((repository_assets / name).read_text(encoding="utf-8"), encoding="utf-8")
+        return source_root
 
-    def _write_fixture(self, *, root: Path) -> Path:
-        bib_path = root / "import.bib"
+    def _write_bibliography(self, *, root: Path) -> Path:
+        bib_path = root / "data/projects.bib"
+        bib_path.parent.mkdir(parents=True)
         bib_path.write_text(
             """@article{Doe:2026,
   title = {{A} useful result},
@@ -43,24 +49,50 @@ class PublicationToolTests(unittest.TestCase):
         )
         return bib_path
 
-    def _build(
-        self,
-        *,
-        root: Path,
-        bib_paths: list[Path],
-        update_existing: bool = False,
-        full_rebuild: bool = False,
-    ) -> dict[str, int]:
+    def _write_project_data(self, *, root: Path) -> Path:
+        path = root / "data/inf-project.json"
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(
+            json.dumps(
+                {
+                    "source": {"url": "https://www.neglab.de/projects/inf/"},
+                    "title": "INF",
+                    "subtitle": "Scientific services and data management",
+                    "description": ["Editable project description."],
+                    "services": [{"name": "Consulting", "items": ["Data management"]}],
+                    "research_areas": ["Natural language processing"],
+                    "related_links": [],
+                    "contact": "Contact the INF team.",
+                    "people": [
+                        {
+                            "name": "Jane Doe",
+                            "role": "Project Leader",
+                            "affiliation": "Test University",
+                            "profile_url": "https://example.org/jane",
+                        },
+                        {
+                            "name": "Max Müller",
+                            "role": "Scientific Staff",
+                            "affiliation": "",
+                            "profile_url": "",
+                        },
+                    ],
+                },
+                ensure_ascii=False,
+            ),
+            encoding="utf-8",
+        )
+        return path
+
+    def _build(self, *, root: Path, bib_path: Path) -> dict[str, int]:
         return build_site(
-            bib_paths=bib_paths,
-            database_path=root / "data/neglab-inf.bib",
-            update_existing=update_existing,
+            bib_path=bib_path,
             docs_dir=root / "docs",
-            full_rebuild=full_rebuild,
             allowed_entry_types=supported_entry_types(include_projects=True),
             project_name="Test INF",
             project_subtitle="Test projects",
-            source_root=self._source_root(),
+            project_data_path=self._write_project_data(root=root),
+            source_root=self._source_root(root=root),
         )
 
     def test_parser_handles_nested_braces_and_latex_names(self) -> None:
@@ -71,108 +103,74 @@ class PublicationToolTests(unittest.TestCase):
         self.assertEqual(entries[0]["bib_key"], "key")
         self.assertEqual(entries[0]["fields"]["title"], "{Nested} title")
 
-    def test_import_creates_database_and_keeps_existing_entries_by_default(self) -> None:
+    def test_build_reads_inputs_without_modifying_them(self) -> None:
         with tempfile.TemporaryDirectory() as temporary_directory:
             root = Path(temporary_directory)
-            source = self._write_fixture(root=root)
-            first = self._build(root=root, bib_paths=[source])
-            second = self._build(root=root, bib_paths=[source])
+            bibliography = self._write_bibliography(root=root)
+            project_data = self._write_project_data(root=root)
+            bib_before = bibliography.read_bytes()
+            json_before = project_data.read_bytes()
+
+            result = self._build(root=root, bib_path=bibliography)
+
             self.assertEqual(
-                first,
-                {"generated": 2, "skipped": 0, "total": 2, "publications": 1, "ignored": 0, "added": 2, "updated": 0, "kept": 0},
+                result,
+                {"generated": 2, "total": 2, "publications": 1, "ignored": 0},
             )
-            self.assertEqual(
-                second,
-                {"generated": 0, "skipped": 2, "total": 2, "publications": 1, "ignored": 0, "added": 0, "updated": 0, "kept": 2},
-            )
-            database = (root / "data/neglab-inf.bib").read_text(encoding="utf-8")
-            self.assertIn("@article{Doe:2026", database)
-            self.assertIn("@project{Repository:2026", database)
-            self.assertIn("projectlink", database)
+            self.assertEqual(bibliography.read_bytes(), bib_before)
+            self.assertEqual(project_data.read_bytes(), json_before)
             index = (root / "docs/index.html").read_text(encoding="utf-8")
             self.assertIn("<strong>2</strong><span>Projects</span>", index)
             self.assertIn("<strong>1</strong><span>Publications</span>", index)
-            self.assertRegex(index, r"assets/site\.css\?v=[a-f0-9]{12}")
+            self.assertIn("Editable project description.", index)
+            self.assertIn("Jane Doe", index)
             manifest = json.loads((root / "docs/publications/index.json").read_text(encoding="utf-8"))
             project = next(item for item in manifest["publications"] if item["bib_key"] == "Repository:2026")
             page = (root / "docs/publications" / project["filename"]).read_text(encoding="utf-8")
             self.assertIn("https://github.com/example/explorer-source", page)
 
-    def test_update_flag_replaces_matching_database_entry_and_page(self) -> None:
+    def test_every_build_replaces_the_complete_output_directory(self) -> None:
         with tempfile.TemporaryDirectory() as temporary_directory:
             root = Path(temporary_directory)
-            source = self._write_fixture(root=root)
-            self._build(root=root, bib_paths=[source])
-            update = root / "update.bib"
-            update.write_text(
-                "@article{Doe:2026, title={A revised result}, author={Doe, Jane}, year={2026}}\n",
+            bibliography = self._write_bibliography(root=root)
+            self._build(root=root, bib_path=bibliography)
+            stale_file = root / "docs/stale.txt"
+            stale_file.write_text("stale", encoding="utf-8")
+            stale_page = root / "docs/publications/stale.html"
+            stale_page.write_text("stale", encoding="utf-8")
+
+            result = self._build(root=root, bib_path=bibliography)
+
+            self.assertEqual(result["generated"], 2)
+            self.assertFalse(stale_file.exists())
+            self.assertFalse(stale_page.exists())
+            self.assertTrue((root / "docs/assets/site.css").is_file())
+
+    def test_manual_bibtex_edits_are_reflected_on_next_build(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            bibliography = self._write_bibliography(root=root)
+            self._build(root=root, bib_path=bibliography)
+            bibliography.write_text(
+                "@project{Only:Project, name={Manually revised project}, abstract={Only this remains.}}\n",
                 encoding="utf-8",
             )
-            kept = self._build(root=root, bib_paths=[update])
-            self.assertEqual(kept["kept"], 1)
-            self.assertNotIn("A revised result", (root / "data/neglab-inf.bib").read_text(encoding="utf-8"))
 
-            updated = self._build(root=root, bib_paths=[update], update_existing=True)
-            self.assertEqual(updated["updated"], 1)
-            self.assertIn("A revised result", (root / "data/neglab-inf.bib").read_text(encoding="utf-8"))
-            manifest = json.loads((root / "docs/publications/index.json").read_text(encoding="utf-8"))
-            record = next(item for item in manifest["publications"] if item["bib_key"] == "Doe:2026")
-            page = (root / "docs/publications" / record["filename"]).read_text(encoding="utf-8")
-            self.assertIn("A revised result", page)
+            result = self._build(root=root, bib_path=bibliography)
 
-    def test_full_rebuild_wipes_database_and_generated_orphans(self) -> None:
-        with tempfile.TemporaryDirectory() as temporary_directory:
-            root = Path(temporary_directory)
-            source = self._write_fixture(root=root)
-            self._build(root=root, bib_paths=[source])
-            orphan = root / "docs/publications/orphan.html"
-            orphan.write_text('<meta name="bib-key" content="old:key">', encoding="utf-8")
-            replacement = root / "replacement.bib"
-            replacement.write_text("@project{Only:Project, name={Only project}, abstract={Only this remains.}}\n", encoding="utf-8")
-            result = self._build(root=root, bib_paths=[replacement], full_rebuild=True)
-            database = (root / "data/neglab-inf.bib").read_text(encoding="utf-8")
-            self.assertNotIn("Doe:2026", database)
-            self.assertIn("Only:Project", database)
-            self.assertFalse(orphan.exists())
             self.assertEqual(result["total"], 1)
             self.assertEqual(result["publications"], 0)
+            pages = list((root / "docs/publications").glob("*.html"))
+            self.assertEqual(len(pages), 1)
+            self.assertIn("Manually revised project", pages[0].read_text(encoding="utf-8"))
 
-    def test_link_tool_stores_updates_and_removes_projectlink_in_database(self) -> None:
-        with tempfile.TemporaryDirectory() as temporary_directory:
-            root = Path(temporary_directory)
-            source = self._write_fixture(root=root)
-            self._build(root=root, bib_paths=[source])
-            arguments = {
-                "database_path": root / "data/neglab-inf.bib",
-                "docs_dir": root / "docs",
-                "bib_key": "Repository:2026",
-                "project_name": "Test INF",
-                "project_subtitle": "Test projects",
-                "source_root": self._source_root(),
-            }
-            page_path = update_publication_link(url="https://github.com/example/first", **arguments)
-            database = (root / "data/neglab-inf.bib").read_text(encoding="utf-8")
-            self.assertIn("projectlink", database)
-            self.assertIn("https://github.com/example/first", database)
-            self.assertIn("https://github.com/example/first", page_path.read_text(encoding="utf-8"))
-
-            update_publication_link(url="https://zenodo.org/records/123", **arguments)
-            database = (root / "data/neglab-inf.bib").read_text(encoding="utf-8")
-            self.assertNotIn("https://github.com/example/first", database)
-            self.assertIn("https://zenodo.org/records/123", database)
-
-            update_publication_link(url=None, **arguments)
-            database = (root / "data/neglab-inf.bib").read_text(encoding="utf-8")
-            self.assertNotIn("projectlink", database)
-            self.assertNotIn("https://zenodo.org/records/123", page_path.read_text(encoding="utf-8"))
-
-    def test_duplicate_keys_in_one_import_fail(self) -> None:
+    def test_duplicate_keys_in_input_fail(self) -> None:
         with tempfile.TemporaryDirectory() as temporary_directory:
             root = Path(temporary_directory)
             bib_path = root / "duplicate.bib"
             bib_path.write_text("@article{same,title={One}}\n@book{same,title={Two}}", encoding="utf-8")
             with self.assertRaisesRegex(ValueError, "Duplicate BibTeX key"):
-                self._build(root=root, bib_paths=[bib_path])
+                self._build(root=root, bib_path=bib_path)
 
 
 if __name__ == "__main__":

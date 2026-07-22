@@ -1,0 +1,108 @@
+{
+  "source": {
+    "url": "https://www.neglab.de/projects/inf/",
+    "retrieved": "2026-07-22"
+  },
+  "title": "INF",
+  "subtitle": "Scientific services and data management",
+  "description": [
+    "INF supports the CRC throughout the research lifecycle: from planning empirical studies and selecting statistical methods to managing, curating, licensing, preserving, and sharing research data for reproducible and sustainable work.",
+    "The project coordinates structured data-management planning, offers statistical training and individual consultation, supports repositories for short- and long-term preservation, and creates computational methods and annotation schemes for work including virtual-reality stimuli and multimodal tracking."
+  ],
+  "services": [
+    {
+      "name": "Consulting",
+      "items": [
+        "Research data management",
+        "Experimental design, statistical methodology, and open-science guidance",
+        "Computational tool and annotation-scheme development",
+        "Evaluation and benchmarking for NLP and multimodal AI",
+        "Corpus planning, data annotation, and guideline design",
+        "Reproducible NLP and AI pipeline development",
+        "Integration of AI components into research and production systems",
+        "Model selection, prompt design, and retrieval-augmented generation workflows",
+        "Responsible AI, transparency, and data-protection guidance",
+        "Scientific validation of computational methods and their results",
+        "Workshops and training on NLP, large language models, and multimodal AI"
+      ]
+    },
+    {
+      "name": "Infrastructure",
+      "items": [
+        "GitLab instance",
+        "OpenWebUI instance",
+        "JupyterHub",
+        "Nextcloud instance"
+      ]
+    }
+  ],
+  "research_areas": [
+    "Computational modelling",
+    "Virtual reality",
+    "Natural language processing",
+    "Data management",
+    "Statistics",
+    "Open language science"
+  ],
+  "related_links": [
+    {
+      "label": "Text Technology Lab",
+      "url": "https://www.texttechnologylab.org/"
+    },
+    {
+      "label": "Romance Lab",
+      "url": "https://www.uni-frankfurt.de/102371493/Romance_Lab"
+    }
+  ],
+  "contact": "Please use the INF team's central contact channel so requests can be handled consistently and transparently.",
+  "people": [
+    {
+      "name": "Prof. Sol Lago",
+      "role": "Project Leader",
+      "affiliation": "Department of Romance Languages and Literatures, Goethe University Frankfurt",
+      "profile_url": "https://www.neglab.de/prof-dr-sol-lago/"
+    },
+    {
+      "name": "Prof. Alexander Mehler",
+      "role": "Project Leader",
+      "affiliation": "Faculty of Computer Science and Mathematics, Goethe University Frankfurt",
+      "profile_url": "https://www.neglab.de/prof-dr-alexander-mehler/"
+    },
+    {
+      "name": "Prof. Manfred Sailer",
+      "role": "Project Leader",
+      "affiliation": "Department of English and American Studies, Goethe University Frankfurt",
+      "profile_url": "https://www.neglab.de/prof-dr-manfred-sailer/"
+    },
+    {
+      "name": "Giuseppe Abrami",
+      "role": "Scientific Staff",
+      "affiliation": "",
+      "profile_url": "https://www.texttechnologylab.org/team/giuseppe-abrami/"
+    },
+    {
+      "name": "Nasimeh Bahmanian",
+      "role": "Scientific Staff",
+      "affiliation": "",
+      "profile_url": "https://www.neglab.de/nasimeh-bahmanian/"
+    },
+    {
+      "name": "Mercedes Martinez Bruera",
+      "role": "Scientific Staff",
+      "affiliation": "",
+      "profile_url": "https://www.neglab.de/mercedes-martinez-bruera/"
+    },
+    {
+      "name": "Leon Hammerla",
+      "role": "Scientific Staff",
+      "affiliation": "",
+      "profile_url": "https://www.neglab.de/leon-hammerla/"
+    },
+    {
+      "name": "Andy Lücking",
+      "role": "Scientific Staff",
+      "affiliation": "",
+      "profile_url": "https://www.neglab.de/dr-andy-luecking/"
+    }
+  ]
+}
