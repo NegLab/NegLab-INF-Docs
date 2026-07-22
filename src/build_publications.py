@@ -120,6 +120,87 @@ def parse_bibtex(*, text: str, source: str) -> list[dict[str, object]]:
     return entries
 
 
+def render_bibtex_entry(*, entry: dict[str, object]) -> str:
+    """Render one parsed entry in a stable, human-editable BibTeX format."""
+    fields = entry.get("fields")
+    if not isinstance(fields, dict):
+        raise TypeError("BibTeX fields must be a dictionary")
+    lines = [f'@{entry["entry_type"]}{{{entry["bib_key"]},']
+    field_items = [(str(name), str(value)) for name, value in fields.items()]
+    width = max((len(name) for name, _ in field_items), default=0)
+    for name, value in field_items:
+        lines.append(f"  {name.ljust(width)} = {{{value}}},")
+    lines.append("}")
+    return "\n".join(lines)
+
+
+def write_bibtex_database(*, path: Path, entries: Sequence[dict[str, object]]) -> None:
+    """Write parsed entries to the authoritative BibTeX database."""
+    path.parent.mkdir(parents=True, exist_ok=True)
+    content = "\n\n".join(str(entry.get("raw_bibtex") or render_bibtex_entry(entry=entry)).strip() for entry in entries)
+    path.write_text(f"{content}\n" if content else "", encoding="utf-8")
+
+
+def read_bibtex_file(*, path: Path) -> list[dict[str, object]]:
+    if not path.is_file():
+        raise FileNotFoundError(f"BibTeX file not found: {path}")
+    entries = parse_bibtex(text=path.read_text(encoding="utf-8"), source=str(path))
+    seen: set[str] = set()
+    for entry in entries:
+        bib_key = str(entry["bib_key"])
+        if bib_key in seen:
+            raise ValueError(f"Duplicate BibTeX key {bib_key!r} in {path}")
+        seen.add(bib_key)
+    return entries
+
+
+def merge_bibtex_database(
+    *,
+    database_path: Path,
+    import_paths: Sequence[Path],
+    update_existing: bool,
+    full_rebuild: bool,
+) -> tuple[list[dict[str, object]], dict[str, object]]:
+    """Merge import files into the database, optionally replacing matching keys."""
+    if full_rebuild or not database_path.exists():
+        database_entries: list[dict[str, object]] = []
+    else:
+        database_entries = read_bibtex_file(path=database_path)
+
+    positions = {str(entry["bib_key"]): position for position, entry in enumerate(database_entries)}
+    added_keys: set[str] = set()
+    updated_keys: set[str] = set()
+    kept_keys: set[str] = set()
+    database_resolved = database_path.resolve()
+
+    for import_path in import_paths:
+        if import_path.resolve() == database_resolved:
+            raise ValueError(f"The database itself cannot be used as an import target: {database_path}")
+        for imported_entry in read_bibtex_file(path=import_path):
+            bib_key = str(imported_entry["bib_key"])
+            if bib_key not in positions:
+                positions[bib_key] = len(database_entries)
+                database_entries.append(imported_entry)
+                added_keys.add(bib_key)
+            elif update_existing:
+                database_entries[positions[bib_key]] = imported_entry
+                if bib_key not in added_keys:
+                    updated_keys.add(bib_key)
+                kept_keys.discard(bib_key)
+            else:
+                kept_keys.add(bib_key)
+
+    write_bibtex_database(path=database_path, entries=database_entries)
+    return database_entries, {
+        "added_keys": added_keys,
+        "updated_keys": updated_keys,
+        "kept_keys": kept_keys,
+        "added": len(added_keys),
+        "updated": len(updated_keys),
+        "kept": len(kept_keys),
+    }
+
+
 def _latex_to_text(*, value: str) -> str:
     replacements = {
         r"\&": "&",
@@ -164,7 +245,7 @@ def _author_names(*, value: str) -> list[str]:
     return authors
 
 
-def _filename_for_key(*, bib_key: str) -> str:
+def filename_for_key(*, bib_key: str) -> str:
     ascii_key = unicodedata.normalize("NFKD", bib_key).encode("ascii", "ignore").decode("ascii")
     slug = re.sub(r"[^a-z0-9]+", "-", ascii_key.lower()).strip("-") or "project"
     digest = hashlib.sha256(bib_key.encode("utf-8")).hexdigest()[:10]
@@ -198,6 +279,9 @@ def _entry_to_publication(*, entry: dict[str, object]) -> dict[str, object]:
     pdf = text_fields.get("pdf", "").strip()
     if not _valid_web_url(url=pdf):
         pdf = ""
+    projectlink = text_fields.get("projectlink", "").strip()
+    if not _valid_web_url(url=projectlink):
+        projectlink = ""
     keywords = [
         _latex_to_text(value=item.strip())
         for item in re.split(r"[,;]", text_fields.get("keywords", ""))
@@ -236,9 +320,10 @@ def _entry_to_publication(*, entry: dict[str, object]) -> dict[str, object]:
         "doi": doi,
         "url": url,
         "pdf": pdf,
+        "projectlink": projectlink,
         "raw_bibtex": str(entry["raw_bibtex"]),
         "source": str(entry["source"]),
-        "filename": _filename_for_key(bib_key=str(entry["bib_key"])),
+        "filename": filename_for_key(bib_key=str(entry["bib_key"])),
     }
 
 
@@ -261,16 +346,24 @@ def _icon(*, name: str) -> str:
     return f'<svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">{paths[name]}</svg>'
 
 
-def _page_shell(*, title: str, description: str, body: str, asset_prefix: str, project_name: str) -> str:
+def _page_shell(
+    *,
+    title: str,
+    description: str,
+    body: str,
+    asset_prefix: str,
+    asset_version: str,
+    project_name: str,
+) -> str:
     return f"""<!doctype html>
 <html lang="en">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="description" content="{_escape(value=description)}">
-  <meta name="theme-color" content="#102a2a">
+  <meta name="theme-color" content="#202d69">
   <title>{_escape(value=title)}</title>
-  <link rel="stylesheet" href="{asset_prefix}assets/site.css">
+  <link rel="stylesheet" href="{asset_prefix}assets/site.css?v={_escape(value=asset_version)}">
 </head>
 <body>
   <a class="skip-link" href="#main-content">Skip to content</a>
@@ -311,7 +404,13 @@ def _render_index_card(*, publication: dict[str, object]) -> str:
 </article>"""
 
 
-def render_index(*, publications: list[dict[str, object]], project_name: str, project_subtitle: str) -> str:
+def render_index(
+    *,
+    publications: list[dict[str, object]],
+    project_name: str,
+    project_subtitle: str,
+    asset_version: str,
+) -> str:
     years = sorted({str(publication["year"]) for publication in publications}, reverse=True)
     types = sorted({(str(publication["entry_type"]), str(publication["type_label"])) for publication in publications}, key=lambda item: item[1])
     year_options = "".join(f'<option value="{_escape(value=year)}">{_escape(value=year)}</option>' for year in years)
@@ -344,13 +443,14 @@ def render_index(*, publications: list[dict[str, object]], project_name: str, pr
   <div class="publication-list" id="publication-list">{cards}</div>
   <div class="empty-state" id="empty-state" hidden><span>{_icon(name='search')}</span><h3>No projects found</h3><p>Try another search or clear the filters.</p></div>
 </section>
-<script src="assets/site.js" defer></script>
+<script src="assets/site.js?v={_escape(value=asset_version)}" defer></script>
 """
     return _page_shell(
         title=f"{project_name} · Projects",
         description="Projects, publications, and research outputs of the NegLab CRC 1629 INF subproject.",
         body=body,
         asset_prefix="",
+        asset_version=asset_version,
         project_name=project_name,
     )
 
@@ -379,7 +479,7 @@ def _detail_rows(*, publication: dict[str, object]) -> str:
     )
 
 
-def render_detail(*, publication: dict[str, object], repository_url: str, project_name: str) -> str:
+def render_detail(*, publication: dict[str, object], project_name: str, asset_version: str) -> str:
     authors = publication["authors"] if isinstance(publication["authors"], list) else []
     keywords = publication["keywords"] if isinstance(publication["keywords"], list) else []
     title = str(publication["title"])
@@ -394,7 +494,7 @@ def render_detail(*, publication: dict[str, object], repository_url: str, projec
         actions.append(f'<a class="button button-primary" href="{_escape(value=publication["url"])}" rel="noopener noreferrer">{_icon(name="external")} {action_label}</a>')
     if publication["pdf"]:
         actions.append(f'<a class="button button-secondary" href="{_escape(value=publication["pdf"])}" rel="noopener noreferrer">{_icon(name="file")} PDF</a>')
-    actions.append(f'<!-- PUBLICATION_LINK_START -->{render_repository_link(url=repository_url)}<!-- PUBLICATION_LINK_END -->')
+    actions.append(f'<!-- PUBLICATION_LINK_START -->{render_repository_link(url=str(publication["projectlink"]))}<!-- PUBLICATION_LINK_END -->')
     abstract = str(publication["abstract"])
     abstract_section = f'<section class="paper-section"><h2>Abstract</h2><p class="abstract">{_escape(value=abstract)}</p></section>' if abstract else '<section class="paper-section muted-section"><h2>Abstract</h2><p>No abstract is available in the bibliography.</p></section>'
     keyword_html = "".join(f'<span>{_escape(value=keyword)}</span>' for keyword in keywords)
@@ -415,25 +515,17 @@ def render_detail(*, publication: dict[str, object], repository_url: str, projec
     <aside class="paper-facts"><h2>{'Project details' if is_project else 'Publication details'}</h2><dl>{_detail_rows(publication=publication)}</dl></aside>
   </div>
 </article>
-<script src="../assets/site.js" defer></script>
+<script src="../assets/site.js?v={_escape(value=asset_version)}" defer></script>
 """
     page = _page_shell(
         title=f"{title} · {project_name}",
         description=abstract[:155] if abstract else f"{'Project' if is_project else 'Publication'} details for {title}.",
         body=body,
         asset_prefix="../",
+        asset_version=asset_version,
         project_name=project_name,
     )
     return page.replace("<meta name=\"theme-color\"", f'<meta name="bib-key" content="{_escape(value=publication["bib_key"])}">\n  <meta name="theme-color"', 1)
-
-
-def _load_links(*, path: Path) -> dict[str, str]:
-    if not path.exists():
-        return {}
-    data = json.loads(path.read_text(encoding="utf-8"))
-    if not isinstance(data, dict) or not all(isinstance(key, str) and isinstance(value, str) for key, value in data.items()):
-        raise ValueError(f"{path} must contain a JSON object mapping BibTeX keys to URLs")
-    return data
 
 
 def _sort_publications(*, publications: Iterable[dict[str, object]]) -> list[dict[str, object]]:
@@ -455,9 +547,19 @@ def _write_assets(*, docs_dir: Path, source_root: Path) -> None:
         shutil.copyfile(source, assets_dir / name)
 
 
-def build_site(
+def _asset_version(*, source_root: Path) -> str:
+    digest = hashlib.sha256()
+    for name in ("site.css", "site.js"):
+        source = source_root / "site_assets" / name
+        if not source.is_file():
+            raise FileNotFoundError(f"Required site asset is missing: {source}")
+        digest.update(source.read_bytes())
+    return digest.hexdigest()[:12]
+
+
+def generate_site_from_entries(
     *,
-    bib_paths: Sequence[Path],
+    entries: Sequence[dict[str, object]],
     docs_dir: Path,
     full_rebuild: bool,
     allowed_entry_types: frozenset[str],
@@ -465,54 +567,47 @@ def build_site(
     project_subtitle: str,
     source_root: Path,
 ) -> dict[str, int]:
-    """Build project catalogue pages and return counts for generated/skipped entries."""
-    all_entries: list[dict[str, object]] = []
-    for bib_path in bib_paths:
-        if not bib_path.is_file():
-            raise FileNotFoundError(f"BibTeX file not found: {bib_path}")
-        all_entries.extend(parse_bibtex(text=bib_path.read_text(encoding="utf-8"), source=str(bib_path)))
-
-    seen: set[str] = set()
-    publications: list[dict[str, object]] = []
-    for entry in all_entries:
-        bib_key = str(entry["bib_key"])
-        if bib_key in seen:
-            raise ValueError(f"Duplicate BibTeX key: {bib_key}")
-        seen.add(bib_key)
-        if str(entry["entry_type"]) in allowed_entry_types:
-            publications.append(_entry_to_publication(entry=entry))
-    publications = _sort_publications(publications=publications)
-
+    """Generate the site from the current authoritative database entries."""
+    publications = _sort_publications(
+        publications=(
+            _entry_to_publication(entry=entry)
+            for entry in entries
+            if str(entry["entry_type"]) in allowed_entry_types
+        )
+    )
     publication_dir = docs_dir / "publications"
     publication_dir.mkdir(parents=True, exist_ok=True)
-    links_path = publication_dir / "links.json"
-    links = _load_links(path=links_path)
 
     if full_rebuild:
         for generated_page in publication_dir.glob("*.html"):
             if '<meta name="bib-key"' in generated_page.read_text(encoding="utf-8"):
                 generated_page.unlink()
 
+    asset_version = _asset_version(source_root=source_root)
+    _write_assets(docs_dir=docs_dir, source_root=source_root)
     generated = 0
     skipped = 0
     for publication in publications:
         target = publication_dir / str(publication["filename"])
-        if target.exists() and not full_rebuild:
+        rendered_page = render_detail(
+            publication=publication,
+            project_name=project_name,
+            asset_version=asset_version,
+        )
+        if target.exists() and target.read_text(encoding="utf-8") == rendered_page:
             skipped += 1
             continue
-        target.write_text(
-            render_detail(
-                publication=publication,
-                repository_url=links.get(str(publication["bib_key"]), ""),
-                project_name=project_name,
-            ),
-            encoding="utf-8",
-        )
+        target.write_text(rendered_page, encoding="utf-8")
         generated += 1
 
     docs_dir.mkdir(parents=True, exist_ok=True)
     (docs_dir / "index.html").write_text(
-        render_index(publications=publications, project_name=project_name, project_subtitle=project_subtitle),
+        render_index(
+            publications=publications,
+            project_name=project_name,
+            project_subtitle=project_subtitle,
+            asset_version=asset_version,
+        ),
         encoding="utf-8",
     )
     manifest = {
@@ -528,24 +623,102 @@ def build_site(
         ]
     }
     (publication_dir / "index.json").write_text(json.dumps(manifest, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
-    if not links_path.exists():
-        links_path.write_text("{}\n", encoding="utf-8")
     (docs_dir / ".nojekyll").touch()
-    _write_assets(docs_dir=docs_dir, source_root=source_root)
     return {
         "generated": generated,
         "skipped": skipped,
         "total": len(publications),
         "publications": sum(publication["entry_type"] != "project" for publication in publications),
-        "ignored": len(all_entries) - len(publications),
+        "ignored": len(entries) - len(publications),
     }
 
 
-def _argument_parser(*, default_docs_dir: Path) -> argparse.ArgumentParser:
+def generate_site_from_database(
+    *,
+    database_path: Path,
+    docs_dir: Path,
+    full_rebuild: bool,
+    allowed_entry_types: frozenset[str],
+    project_name: str,
+    project_subtitle: str,
+    source_root: Path,
+) -> dict[str, int]:
+    entries = read_bibtex_file(path=database_path) if database_path.exists() else []
+    return generate_site_from_entries(
+        entries=entries,
+        docs_dir=docs_dir,
+        full_rebuild=full_rebuild,
+        allowed_entry_types=allowed_entry_types,
+        project_name=project_name,
+        project_subtitle=project_subtitle,
+        source_root=source_root,
+    )
+
+
+def build_site(
+    *,
+    bib_paths: Sequence[Path],
+    database_path: Path,
+    update_existing: bool,
+    docs_dir: Path,
+    full_rebuild: bool,
+    allowed_entry_types: frozenset[str],
+    project_name: str,
+    project_subtitle: str,
+    source_root: Path,
+) -> dict[str, int]:
+    """Merge imports into the database and generate its project catalogue."""
+    entries, merge_result = merge_bibtex_database(
+        database_path=database_path,
+        import_paths=bib_paths,
+        update_existing=update_existing,
+        full_rebuild=full_rebuild,
+    )
+    site_result = generate_site_from_entries(
+        entries=entries,
+        docs_dir=docs_dir,
+        full_rebuild=full_rebuild,
+        allowed_entry_types=allowed_entry_types,
+        project_name=project_name,
+        project_subtitle=project_subtitle,
+        source_root=source_root,
+    )
+    return {
+        **site_result,
+        "added": int(merge_result["added"]),
+        "updated": int(merge_result["updated"]),
+        "kept": int(merge_result["kept"]),
+    }
+
+
+def supported_entry_types(*, include_projects: bool = True) -> frozenset[str]:
+    entry_types = {
+        "article",
+        "book",
+        "booklet",
+        "inbook",
+        "incollection",
+        "inproceedings",
+        "manual",
+        "mastersthesis",
+        "misc",
+        "phdthesis",
+        "proceedings",
+        "techreport",
+        "unpublished",
+    }
+    if include_projects:
+        entry_types.add("project")
+    return frozenset(entry_types)
+
+
+def _argument_parser(*, default_docs_dir: Path, default_database_path: Path) -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="Generate a GitHub Pages project catalogue from one or more BibTeX files.")
-    parser.add_argument("bib_files", nargs="+", type=Path, help="BibTeX file(s) to import")
+    parser.add_argument("bib_files", nargs="*", type=Path, help="BibTeX file(s) to merge into the database; omit to rebuild docs from the database")
+    parser.add_argument("--database", type=Path, default=default_database_path, help=f"authoritative BibTeX database (default: {default_database_path})")
     parser.add_argument("--docs-dir", type=Path, default=default_docs_dir, help=f"site output directory (default: {default_docs_dir})")
-    parser.add_argument("--full-rebuild", action="store_true", help="replace every generated project page and remove orphaned generated HTML files")
+    parser.add_argument("--update", action="store_true", help="replace database entries whose BibTeX keys occur in an import file")
+    parser.add_argument("--full-rebuild", action="store_true", help="wipe the database before importing and rebuild every generated project page")
     parser.add_argument("--project-name", default="NegLab INF", help="short project name shown in the site header")
     parser.add_argument("--project-subtitle", default="Infrastructure for research on negation", help="main heading shown on the project index")
     return parser
@@ -553,13 +726,16 @@ def _argument_parser(*, default_docs_dir: Path) -> argparse.ArgumentParser:
 
 def main(*, argv: Sequence[str] | None = None) -> int:
     project_root = Path(__file__).resolve().parent.parent
-    parser = _argument_parser(default_docs_dir=project_root / "docs")
-    arguments = parser.parse_args(argv)
-    allowed_entry_types = frozenset(
-        {"article", "book", "booklet", "inbook", "incollection", "inproceedings", "manual", "mastersthesis", "misc", "phdthesis", "proceedings", "project", "techreport", "unpublished"}
+    parser = _argument_parser(
+        default_docs_dir=project_root / "docs",
+        default_database_path=project_root / "data" / "neglab-inf.bib",
     )
+    arguments = parser.parse_args(argv)
+    allowed_entry_types = supported_entry_types(include_projects=True)
     result = build_site(
         bib_paths=arguments.bib_files,
+        database_path=arguments.database,
+        update_existing=arguments.update,
         docs_dir=arguments.docs_dir,
         full_rebuild=arguments.full_rebuild,
         allowed_entry_types=allowed_entry_types,
@@ -568,8 +744,9 @@ def main(*, argv: Sequence[str] | None = None) -> int:
         source_root=Path(__file__).resolve().parent,
     )
     print(
-        f"Imported {result['total']} projects and outputs ({result['publications']} publications): {result['generated']} generated, "
-        f"{result['skipped']} already present, {result['ignored']} unsupported entries ignored."
+        f"Database: {result['added']} added, {result['updated']} updated, {result['kept']} kept. "
+        f"Site: {result['total']} projects and outputs ({result['publications']} publications), "
+        f"{result['generated']} pages written, {result['skipped']} unchanged, {result['ignored']} unsupported entries ignored."
     )
     return 0
 

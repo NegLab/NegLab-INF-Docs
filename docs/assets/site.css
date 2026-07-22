@@ -56,7 +56,7 @@ button, input, select { font: inherit; }
 .button-disabled { color: #899491; background: #f4f6f5; cursor: not-allowed; }
 .button-disabled:hover { transform: none; border-color: var(--line); }
 
-.stats { position: relative; z-index: 3; width: min(1120px, calc(100% - 2.5rem)); margin: -42px auto 0; padding: 1.4rem 0; display: grid; grid-template-columns: repeat(4, 1fr); background: white; border: 1px solid rgba(223, 227, 240, .9); border-radius: var(--radius); box-shadow: var(--shadow); }
+.stats { position: relative; z-index: 3; width: min(1120px, calc(100% - 2.5rem)); margin: -42px auto 0; padding: 1.4rem 0; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); background: white; border: 1px solid rgba(223, 227, 240, .9); border-radius: var(--radius); box-shadow: var(--shadow); }
 .stats div { padding: .35rem clamp(1rem, 4vw, 3rem); display: flex; flex-direction: column; }
 .stats div + div { border-left: 1px solid var(--line); }
 .stats strong { color: var(--blue); font-size: 1.85rem; line-height: 1.2; }
