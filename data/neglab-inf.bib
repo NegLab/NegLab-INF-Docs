@@ -1,3 +1,9 @@
+# -------------------------------------------------
+# -------------------------------------------------
+# PUBLICATIONS:
+# -------------------------------------------------
+# -------------------------------------------------
+
 @inproceedings{Hammerla:etal:2026:c,
   title     = {RT-Seg: A Toolkit for Reasoning Trace Segmentation},
   author    = {Leon Hammerla and Bhuvanesh Verma and Alexander Mehler},
@@ -279,4 +285,193 @@
                the paper opens up novel text-technological perspectives for existing
                practices in disciplines that deal with the scientific analysis
                of large amounts of data based on NLP.}
+}
+
+# -------------------------------------------------
+# -------------------------------------------------
+# PROJECTS:
+# -------------------------------------------------
+# -------------------------------------------------
+
+@project{INF:OpenWebUI:2025,
+  name        = {OpenWebUI and Local LLM Hosting},
+  subtitle    = {Providing access to locally hosted large language models for the CRC},
+  author      = {Hammerla, Leon and Abrami, Giuseppe},
+  year        = {2025},
+  abstract    = {We set up and host an OpenWebUI instance for the CRC, providing
+                 researchers with access to large language models running on
+                 local servers. The infrastructure enables the use of generative
+                 AI models within the CRC while keeping model execution and data
+                 processing on institutional infrastructure.},
+  url         = {https://llm.neglab.de},
+  projectlink = {https://llm.neglab.de},
+  keywords    = {OpenWebUI, large language models, LLM, infrastructure, hosting, neglab},
+  note        = {active}
+}
+
+@project{INF:LabelStudio:2025,
+  name        = {Label Studio Annotation Platform},
+  subtitle    = {A centrally hosted annotation environment for the CRC},
+  author      = {Hammerla, Leon},
+  year        = {2025},
+  abstract    = {We host and maintain a Label Studio instance for the CRC.
+                 The platform supports collaborative data annotation projects
+                 and provides researchers with a central environment for
+                 creating annotation tasks, managing annotators, and exporting
+                 annotated datasets.},
+  url         = {https://anno.neglab.de},
+  projectlink = {https://anno.neglab.de},
+  keywords    = {Label Studio, annotation, datasets, collaboration, hosting, neglab},
+  note        = {active}
+}
+
+@project{INF:Slurm:2026,
+  name        = {Slurm HPC Infrastructure},
+  subtitle    = {Distributed process execution and resource management on CRC servers},
+  author      = {Abrami, Giuseppe},
+  year        = {2026},
+  abstract    = {We set up and maintain a Slurm workload management system on
+                 the CRC servers. The system supports high-performance and
+                 distributed computing by scheduling computational jobs,
+                 allocating server resources, and managing parallel process
+                 execution.},
+  url         = {},
+  projectlink = {},
+  keywords    = {Slurm, HPC, job scheduling, distributed computing, infrastructure, neglab},
+  note        = {active}
+}
+
+@project{INF:SurrealDB:2025,
+  name        = {SurrealDB Data-Sharing Infrastructure},
+  subtitle    = {Structured and role-based access to shared CRC data},
+  author      = {Hammerla, Leon},
+  year        = {2025},
+  abstract    = {We host and maintain a SurrealDB instance to support data
+                 accessibility and sharing within the CRC. The infrastructure
+                 provides separate namespaces and databases as well as a
+                 user- and role-management system for controlling access to
+                 different datasets and resources.},
+  url         = {https://databases.neglab.de},
+  projectlink = {https://databases.neglab.de},
+  keywords    = {SurrealDB, database, data sharing, access management, infrastructure, neglab},
+  note        = {active}
+}
+
+@project{INF:DigitalDataManagementProtocol,
+  name        = {Digital Data Management Protocol},
+  subtitle    = {A web-based tool for creating and exporting data management protocols},
+  author      = {},
+  year        = {2025},
+  abstract    = {We developed a web-based digital data management protocol that
+                 can be completed interactively by researchers. Once filled
+                 out, the protocol can be downloaded for documentation and
+                 further use. The application is currently hosted on the CRC
+                 servers.},
+  url         = {https://metadata.neglab.de},
+  projectlink = {https://metadata.neglab.de},
+  keywords    = {data management, protocol, web application, documentation, hosting, neglab},
+  note        = {active}
+}
+
+@project{INF:MoTR:2025,
+  name        = {Mouse Tracking for Reading},
+  subtitle    = {A browser-based tool for collecting word-by-word reading measures},
+  author      = {Hammerla, Leon and Eichler, Elisabeth},
+  year        = {2025},
+  abstract    = {We deployed and maintain a Mouse Tracking for Reading (MoTR)
+                 experiment on the CRC server infrastructure. The application
+                 uses separate domains for the browser-based experimental
+                 frontend and the Magpie backend, enabling the collection and
+                 management of word-by-word reading measures derived from
+                 participants' mouse movements.},
+  url         = {https://magpie.neglab.de},
+  projectlink = {https://github.com/LeonHammerla/MoTR},
+  keywords    = {mouse tracking, reading times, psycholinguistics, experiments,
+                 language processing, data processing, neglab},
+  note        = {active}
+}
+
+@project{INF:Surprisal:2025,
+  name        = {Surprisal Program},
+  subtitle    = {A Python-based tool for calculating surprisal values},
+  author      = {Hammerla, Leon and Martinez Bruera, Mercedes},
+  year        = {2025},
+  abstract    = {We developed a Python-based tool for calculating surprisal
+                 values for textual data stored in CSV files. The program
+                 supports multiple language models available through Hugging
+                 Face and provides a unified workflow for working with both
+                 decoder-based and encoder-based model architectures.},
+  url         = {https://github.com/LeonHammerla/surprisal_program},
+  projectlink = {https://github.com/LeonHammerla/surprisal_program},
+  keywords    = {surprisal, LLMs, encoder, decoder, Hugging Face, linguistics,
+                 neglab},
+  note        = {active}
+}
+
+@project{INF:ItalDia:2025,
+  name        = {LLM Annotation Pipeline},
+  subtitle    = {An LLM-powered annotation pipeline for Italian dialect annotation},
+  author      = {Hammerla, Leon},
+  year        = {2025},
+  abstract    = {We developed a Python-based annotation pipeline for the
+                 automated analysis of Italian dialect data. The pipeline
+                 connects to OpenAI-compatible language-model endpoints and
+                 provides a configurable workflow for submitting annotation
+                 tasks, processing model responses, and storing the resulting
+                 annotations in a structured format.},
+  url         = {},
+  projectlink = {},
+  keywords    = {annotation, LLMs, API, OpenWebUI, Hugging Face, linguistics,
+                 neglab},
+  note        = {closed}
+}
+
+@project{INF:ScopeAnnotation:2025,
+  name        = {Scope Annotation Task},
+  subtitle    = {Designing a Label Studio interface for German scope-relation annotation},
+  author      = {Hammerla, Leon and Jordan, Jana},
+  year        = {2025},
+  abstract    = {We designed and implemented a Label Studio configuration for
+                 the manual annotation of scope relations in German-language
+                 data. The project included preparing and importing the source
+                 data, generating automatic pre-annotations to support complex
+                 manual annotation decisions, deploying the task in Label
+                 Studio, and managing the resulting annotations. Following the
+                 annotation process, the data were validated, transformed, and
+                 returned in a structured CSV format for further analysis.},
+  url         = {},
+  projectlink = {},
+  keywords    = {annotation, LLMs, Label Studio, linguistics, neglab},
+  note        = {closed}
+}
+
+@project{INF:AnnotationModel:2025,
+  name        = {NPI Annotation Model},
+  subtitle    = {Automatic annotation model for analyzing the positive-base contexts of BNDAs},
+  author      = {Hammerla, Leon and Reinert, Caroline},
+  year        = {2025},
+  abstract    = {We developed an automatic annotation model for identifying
+                 and analyzing the positive-base contexts of BNDAs. The model
+                 applies a rule-based approach built on dependency relations
+                 and syntactic patterns, enabling the systematic annotation
+                 and analysis of large corpus datasets.},
+  url         = {},
+  projectlink = {},
+  keywords    = {annotation, rule-based model, dependency parsing, corpus
+                 linguistics, neglab},
+  note        = {closed}
+}
+
+@project{INF:UCEvis:2025,
+  name        = {UCE data visualization},
+  subtitle    = {Using UCE for data visualization},
+  author      = {Hammerla, Leon},
+  year        = {2025},
+  abstract    = {We modified the UCE (Unified Corpus Explorer) for displaying CRC datasets in
+                 Leipzig Glossing format, enabling compelx search and visualization.},
+  url         = {},
+  projectlink = {},
+  keywords    = {visualization, corpus
+                 linguistics, neglab},
+  note        = {closed}
 }

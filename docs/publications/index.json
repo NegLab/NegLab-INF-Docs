@@ -43,6 +43,13 @@
       "entry_type": "inproceedings"
     },
     {
+      "bib_key": "INF:Slurm:2026",
+      "filename": "inf-slurm-2026-362dfc2d9d.html",
+      "title": "Slurm HPC Infrastructure",
+      "year": "2026",
+      "entry_type": "project"
+    },
+    {
       "bib_key": "Hammerla:et:al:2025b",
       "filename": "hammerla-et-al-2025b-cded7c9c2f.html",
       "title": "D-Neg: Syntax-Aware Graph Reasoning for Negation Detection",
@@ -55,6 +62,13 @@
       "title": "Data management protocol for CRC 1629",
       "year": "2025",
       "entry_type": "techreport"
+    },
+    {
+      "bib_key": "INF:DigitalDataManagementProtocol",
+      "filename": "inf-digitaldatamanagementprotocol-c4e3629750.html",
+      "title": "Digital Data Management Protocol",
+      "year": "2025",
+      "entry_type": "project"
     },
     {
       "bib_key": "Abrami:et:al:2025:a",
@@ -71,6 +85,27 @@
       "entry_type": "article"
     },
     {
+      "bib_key": "INF:LabelStudio:2025",
+      "filename": "inf-labelstudio-2025-bd06e8a97c.html",
+      "title": "Label Studio Annotation Platform",
+      "year": "2025",
+      "entry_type": "project"
+    },
+    {
+      "bib_key": "INF:ItalDia:2025",
+      "filename": "inf-italdia-2025-3b1cc4cde6.html",
+      "title": "LLM Annotation Pipeline",
+      "year": "2025",
+      "entry_type": "project"
+    },
+    {
+      "bib_key": "INF:MoTR:2025",
+      "filename": "inf-motr-2025-d77eb6e928.html",
+      "title": "Mouse Tracking for Reading",
+      "year": "2025",
+      "entry_type": "project"
+    },
+    {
       "bib_key": "Bundan:Abrami:Mehler:2025",
       "filename": "bundan-abrami-mehler-2025-8933b17591.html",
       "title": "Multimodal Docker Unified UIMA Interface: New Horizons for Distributed Microservice-Oriented Processing of Corpora using UIMA",
@@ -78,11 +113,53 @@
       "entry_type": "inproceedings"
     },
     {
+      "bib_key": "INF:AnnotationModel:2025",
+      "filename": "inf-annotationmodel-2025-8784b3f0c5.html",
+      "title": "NPI Annotation Model",
+      "year": "2025",
+      "entry_type": "project"
+    },
+    {
+      "bib_key": "INF:OpenWebUI:2025",
+      "filename": "inf-openwebui-2025-2fdbda8ca7.html",
+      "title": "OpenWebUI and Local LLM Hosting",
+      "year": "2025",
+      "entry_type": "project"
+    },
+    {
+      "bib_key": "INF:ScopeAnnotation:2025",
+      "filename": "inf-scopeannotation-2025-f206ab1457.html",
+      "title": "Scope Annotation Task",
+      "year": "2025",
+      "entry_type": "project"
+    },
+    {
       "bib_key": "Hammerla:et:al:2025a",
       "filename": "hammerla-et-al-2025a-03143c8588.html",
       "title": "Standardizing Heterogeneous Corpora with DUUR: A Dual Data- and Process-Oriented Approach to Enhancing NLP Pipeline Integration",
       "year": "2025",
       "entry_type": "inproceedings"
+    },
+    {
+      "bib_key": "INF:Surprisal:2025",
+      "filename": "inf-surprisal-2025-b5dd19c811.html",
+      "title": "Surprisal Program",
+      "year": "2025",
+      "entry_type": "project"
+    },
+    {
+      "bib_key": "INF:SurrealDB:2025",
+      "filename": "inf-surrealdb-2025-a75f389c0d.html",
+      "title": "SurrealDB Data-Sharing Infrastructure",
+      "year": "2025",
+      "entry_type": "project"
+    },
+    {
+      "bib_key": "INF:UCEvis:2025",
+      "filename": "inf-ucevis-2025-af4f9dc5b1.html",
+      "title": "UCE data visualization",
+      "year": "2025",
+      "entry_type": "project"
     }
   ]
 }
