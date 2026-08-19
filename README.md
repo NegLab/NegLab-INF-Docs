@@ -9,8 +9,8 @@ asset:
   tools, projects, publications, and their links.
 - `data/inf-project.json` contains the INF description, services, research
   areas, related links, contact text, and people.
-- `data/inf_logo.svg` is the INF logo displayed in the homepage hero and
-  defines the blue and pink site palette.
+- `data/inf_logo.svg` is retained as the INF visual-identity source and defines
+  the blue and pink site palette; the homepage itself uses text branding.
 
 The generator only reads these inputs. It never edits or merges BibTeX data.
 Everything under `docs/` is generated output and is replaced on every build.
@@ -51,6 +51,12 @@ also accepts two NegLab INF-specific entry types:
   workflows made available by INF.
 - `@project` for research, development, annotation, and collaboration
   activities carried out by INF.
+
+The categories are additive rather than mutually exclusive. If a project or
+publication also has a reusable tool, keep the original entry unchanged and
+add a separate `@tool` entry with its own unique key. Use the tool’s `related`
+field to reference the project or publication key. The two records then appear
+in their respective homepage catalogues and receive separate detail pages.
 
 All three categories live in the same `data/neglab-inf.bib` file. Do not create
 a separate tool catalogue or data file. See
@@ -116,8 +122,8 @@ The build writes:
   Publications catalogue.
 - `docs/publications/*.html`: one detail page per supported BibTeX entry.
 - `docs/publications/index.json`: mapping from BibTeX keys to generated files.
-- `docs/assets/`: the stylesheet, JavaScript, and copied INF logo used by
-  GitHub Pages.
+- `docs/assets/`: the stylesheet, JavaScript, and copied visual-identity asset
+  used by GitHub Pages.
 - `docs/.nojekyll`: disables unnecessary Jekyll processing.
 
 Asset URLs contain a content hash so browsers and GitHub Pages do not retain an

@@ -50,11 +50,18 @@
       "entry_type": "inproceedings"
     },
     {
+      "bib_key": "INF:Slurm",
+      "filename": "inf-slurm-8a379953a5.html",
+      "title": "Slurm HPC Infrastructure",
+      "year": "2026",
+      "entry_type": "tool"
+    },
+    {
       "bib_key": "INF:Slurm:2026",
       "filename": "inf-slurm-2026-362dfc2d9d.html",
       "title": "Slurm HPC Infrastructure",
       "year": "2026",
-      "entry_type": "tool"
+      "entry_type": "project"
     },
     {
       "bib_key": "Hammerla:et:al:2025b",
@@ -73,6 +80,13 @@
     {
       "bib_key": "INF:DigitalDataManagementProtocol",
       "filename": "inf-digitaldatamanagementprotocol-c4e3629750.html",
+      "title": "Digital Data Management Protocol",
+      "year": "2025",
+      "entry_type": "project"
+    },
+    {
+      "bib_key": "INF:DigitalDataManagementProtocol:Tool",
+      "filename": "inf-digitaldatamanagementprotocol-tool-9c12626f3f.html",
       "title": "Digital Data Management Protocol",
       "year": "2025",
       "entry_type": "tool"
@@ -99,11 +113,18 @@
       "entry_type": "article"
     },
     {
+      "bib_key": "INF:LabelStudio",
+      "filename": "inf-labelstudio-9cac4ac155.html",
+      "title": "Label Studio Annotation Platform",
+      "year": "2025",
+      "entry_type": "tool"
+    },
+    {
       "bib_key": "INF:LabelStudio:2025",
       "filename": "inf-labelstudio-2025-bd06e8a97c.html",
       "title": "Label Studio Annotation Platform",
       "year": "2025",
-      "entry_type": "tool"
+      "entry_type": "project"
     },
     {
       "bib_key": "INF:ItalDia:2025",
@@ -117,7 +138,7 @@
       "filename": "inf-motr-2025-d77eb6e928.html",
       "title": "Mouse Tracking for Reading",
       "year": "2025",
-      "entry_type": "tool"
+      "entry_type": "project"
     },
     {
       "bib_key": "Bundan:Abrami:Mehler:2025",
@@ -134,11 +155,18 @@
       "entry_type": "project"
     },
     {
+      "bib_key": "INF:OpenWebUI",
+      "filename": "inf-openwebui-f148d01805.html",
+      "title": "OpenWebUI and Local LLM Hosting",
+      "year": "2025",
+      "entry_type": "tool"
+    },
+    {
       "bib_key": "INF:OpenWebUI:2025",
       "filename": "inf-openwebui-2025-2fdbda8ca7.html",
       "title": "OpenWebUI and Local LLM Hosting",
       "year": "2025",
-      "entry_type": "tool"
+      "entry_type": "project"
     },
     {
       "bib_key": "INF:ScopeAnnotation:2025",
@@ -155,9 +183,23 @@
       "entry_type": "inproceedings"
     },
     {
+      "bib_key": "INF:Surprisal",
+      "filename": "inf-surprisal-11041d1b74.html",
+      "title": "Surprisal Program",
+      "year": "2025",
+      "entry_type": "tool"
+    },
+    {
       "bib_key": "INF:Surprisal:2025",
       "filename": "inf-surprisal-2025-b5dd19c811.html",
       "title": "Surprisal Program",
+      "year": "2025",
+      "entry_type": "project"
+    },
+    {
+      "bib_key": "INF:SurrealDB",
+      "filename": "inf-surrealdb-4eccb407c5.html",
+      "title": "SurrealDB Data-Sharing Infrastructure",
       "year": "2025",
       "entry_type": "tool"
     },
@@ -166,7 +208,7 @@
       "filename": "inf-surrealdb-2025-a75f389c0d.html",
       "title": "SurrealDB Data-Sharing Infrastructure",
       "year": "2025",
-      "entry_type": "tool"
+      "entry_type": "project"
     },
     {
       "bib_key": "INF:UCEvis:2025",

@@ -346,7 +346,7 @@ def _page_shell(
       <span class="brand-mark">INF</span>
       <span><strong>{_escape(value=project_name)}</strong><small>Information Infrastructure</small></span>
     </a>
-    <nav aria-label="Main navigation"><a href="{asset_prefix}index.html#about">About</a><a href="{asset_prefix}index.html#people">People</a><a href="{asset_prefix}index.html#tools">Tools &amp; Services</a><a href="{asset_prefix}index.html#projects">Projects &amp; Publications</a><a href="https://www.neglab.de/" rel="noopener noreferrer">NegLaB {_icon(name='external')}</a></nav>
+    <nav aria-label="Main navigation"><a href="{asset_prefix}index.html#about">About</a><a href="{asset_prefix}index.html#people">People</a><a href="{asset_prefix}index.html#tools">Tools &amp; Services</a><a href="{asset_prefix}index.html#projects">Projects &amp; Publications</a></nav>
   </header>
   <main id="main-content">{body}</main>
   <footer><div><strong>{_escape(value=project_name)}</strong><p>Tools, projects, publications, and information infrastructure for collaborative negation research.</p></div><p>CRC 1629 · Goethe University Frankfurt</p></footer>
@@ -378,8 +378,7 @@ def _render_catalogue_card(*, entry: dict[str, object]) -> str:
     return f"""<article class="publication-card" data-year="{_escape(value=entry['year'])}" data-type="{_escape(value=entry['entry_type'])}" data-search="{_escape(value=searchable)}">
   <div class="card-year"><span>{_escape(value=entry['year'])}</span><small>{_escape(value=entry['type_label'])}</small></div>
   <div class="card-content">
-    <div class="card-heading"><h3><a href="publications/{_escape(value=entry['filename'])}">{_escape(value=entry['title'])}</a></h3>{note}</div>
-    {author_line}{venue}
+    <div class="card-heading"><h3><a href="publications/{_escape(value=entry['filename'])}">{_escape(value=entry['title'])}</a></h3>{note}</div>{author_line}{venue}
   </div>
   <a class="card-arrow" href="publications/{_escape(value=entry['filename'])}" aria-label="View {_escape(value=entry['title'])}">{_icon(name='arrow')}</a>
 </article>"""
@@ -534,13 +533,8 @@ def render_index(
     )
     tool_cards = "\n".join(_render_tool_card(entry=entry) for entry in tools)
     catalogue_cards = "\n".join(_render_catalogue_card(entry=entry) for entry in catalogue_entries)
-    contributors = {
-        person
-        for entry in entries
-        for field in ("authors", "maintainers")
-        for person in entry[field]
-        if isinstance(person, str)
-    }
+    people = project_data["people"] if isinstance(project_data["people"], list) else []
+    people_count = sum(isinstance(person, dict) for person in people)
     tool_count = sum(entry["entry_type"] == "tool" for entry in entries)
     project_count = sum(entry["entry_type"] == "project" for entry in entries)
     publication_count = sum(entry["entry_type"] not in {"project", "tool"} for entry in entries)
@@ -550,15 +544,37 @@ def render_index(
     <div class="eyebrow">CRC 1629 · Negation in Language and Beyond</div>
     <h1>{_escape(value=project_subtitle)}</h1>
     <p>Tools, services, projects, and research outputs from the INF subproject, building sustainable infrastructure and methods for collaborative research on negation.</p>
-    <a class="button button-primary" href="#tools">Browse tools &amp; services {_icon(name='arrow')}</a>
   </div>
-  <div class="hero-logo"><img src="assets/inf_logo.svg" alt="INF — Information Infrastructure"></div>
-</section>
-<section class="stats" aria-label="Catalogue statistics">
-  <div><strong>{tool_count}</strong><span>Tools</span></div>
-  <div><strong>{project_count}</strong><span>Projects</span></div>
-  <div><strong>{publication_count}</strong><span>Publications</span></div>
-  <div><strong>{len(contributors)}</strong><span>Contributors</span></div>
+  <nav class="section-navigation" aria-label="Explore the INF website">
+    <a class="section-panel" href="#about">
+      <span class="panel-icon">{_icon(name='book')}</span>
+      <span class="panel-number">01</span>
+      <h2>About INF</h2>
+      <p>Learn how INF supports sustainable data, infrastructure, and collaborative research across the CRC.</p>
+      <span class="panel-footer"><span>Project overview</span>{_icon(name='arrow')}</span>
+    </a>
+    <a class="section-panel" href="#people">
+      <span class="panel-icon">{_icon(name='users')}</span>
+      <span class="panel-number">02</span>
+      <h2>People</h2>
+      <p>Meet the project leadership and scientific staff behind INF’s services and research support.</p>
+      <span class="panel-footer"><span class="panel-stat"><strong>{people_count}</strong><span>Team members</span></span>{_icon(name='arrow')}</span>
+    </a>
+    <a class="section-panel" href="#tools">
+      <span class="panel-icon">{_icon(name='code')}</span>
+      <span class="panel-number">03</span>
+      <h2>Tools &amp; Services</h2>
+      <p>Browse reusable software, hosted services, infrastructure resources, and workflows provided by INF.</p>
+      <span class="panel-footer"><span class="panel-stat"><strong>{tool_count}</strong><span>Tools</span></span>{_icon(name='arrow')}</span>
+    </a>
+    <a class="section-panel" href="#projects">
+      <span class="panel-icon">{_icon(name='file')}</span>
+      <span class="panel-number">04</span>
+      <h2>Projects &amp; Publications</h2>
+      <p>Explore INF collaborations, development activities, articles, conference papers, and reports.</p>
+      <span class="panel-footer"><span class="panel-stat"><strong>{project_count}</strong><span>Projects</span><strong>{publication_count}</strong><span>Publications</span></span>{_icon(name='arrow')}</span>
+    </a>
+  </nav>
 </section>
 {_render_inf_overview(project_data=project_data)}
 <section class="publication-section tool-section" id="tools">

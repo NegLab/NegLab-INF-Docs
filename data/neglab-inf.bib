@@ -343,7 +343,7 @@
   related       = {Abrami:et:al:2025:a}
 }
 
-@tool{INF:OpenWebUI:2025,
+@tool{INF:OpenWebUI,
   name        = {OpenWebUI and Local LLM Hosting},
   subtitle    = {Providing access to locally hosted large language models for the CRC},
   author      = {Hammerla, Leon and Abrami, Giuseppe},
@@ -359,10 +359,11 @@
   projectlink = {https://llm.neglab.de},
   access      = {CRC members},
   keywords    = {OpenWebUI, large language models, LLM, infrastructure, hosting, neglab},
-  status      = {active}
+  status      = {active},
+  related     = {INF:OpenWebUI:2025}
 }
 
-@tool{INF:LabelStudio:2025,
+@tool{INF:LabelStudio,
   name        = {Label Studio Annotation Platform},
   subtitle    = {A centrally hosted annotation environment for the CRC},
   author      = {Hammerla, Leon},
@@ -378,10 +379,11 @@
   projectlink = {https://anno.neglab.de},
   access      = {CRC members},
   keywords    = {Label Studio, annotation, datasets, collaboration, hosting, neglab},
-  status      = {active}
+  status      = {active},
+  related     = {INF:LabelStudio:2025}
 }
 
-@tool{INF:Slurm:2026,
+@tool{INF:Slurm,
   name        = {Slurm HPC Infrastructure},
   subtitle    = {Distributed process execution and resource management on CRC servers},
   author      = {Abrami, Giuseppe},
@@ -397,10 +399,11 @@
   projectlink = {},
   access      = {CRC members with allocated compute access},
   keywords    = {Slurm, HPC, job scheduling, distributed computing, infrastructure, neglab},
-  status      = {active}
+  status      = {active},
+  related     = {INF:Slurm:2026}
 }
 
-@tool{INF:SurrealDB:2025,
+@tool{INF:SurrealDB,
   name        = {SurrealDB Data-Sharing Infrastructure},
   subtitle    = {Structured and role-based access to shared CRC data},
   author      = {Hammerla, Leon},
@@ -416,10 +419,11 @@
   projectlink = {https://databases.neglab.de},
   access      = {CRC members with authorized database access},
   keywords    = {SurrealDB, database, data sharing, access management, infrastructure, neglab},
-  status      = {active}
+  status      = {active},
+  related     = {INF:SurrealDB:2025}
 }
 
-@tool{INF:DigitalDataManagementProtocol,
+@tool{INF:DigitalDataManagementProtocol:Tool,
   name        = {Digital Data Management Protocol},
   subtitle    = {A web-based tool for creating and exporting data management protocols},
   author      = {},
@@ -435,31 +439,11 @@
   projectlink = {https://metadata.neglab.de},
   access      = {CRC members},
   keywords    = {data management, protocol, web application, documentation, hosting, neglab},
-  status      = {active}
+  status      = {active},
+  related     = {INF:DigitalDataManagementProtocol}
 }
 
-@tool{INF:MoTR:2025,
-  name        = {Mouse Tracking for Reading},
-  subtitle    = {A browser-based tool for collecting word-by-word reading measures},
-  author      = {Hammerla, Leon and Eichler, Elisabeth},
-  maintainer  = {Hammerla, Leon and Eichler, Elisabeth},
-  year        = {2025},
-  abstract    = {We deployed and maintain a Mouse Tracking for Reading (MoTR)
-                 experiment on the CRC server infrastructure. The application
-                 uses separate domains for the browser-based experimental
-                 frontend and the Magpie backend, enabling the collection and
-                 management of word-by-word reading measures derived from
-                 participants' mouse movements.},
-  tooltype    = {software},
-  url         = {https://magpie.neglab.de},
-  projectlink = {https://github.com/LeonHammerla/MoTR},
-  access      = {Public},
-  keywords    = {mouse tracking, reading times, psycholinguistics, experiments,
-                 language processing, data processing, neglab},
-  status      = {active}
-}
-
-@tool{INF:Surprisal:2025,
+@tool{INF:Surprisal,
   name        = {Surprisal Program},
   subtitle    = {A Python-based tool for calculating surprisal values},
   author      = {Hammerla, Leon and Martinez Bruera, Mercedes},
@@ -476,7 +460,8 @@
   access      = {Public},
   keywords    = {surprisal, LLMs, encoder, decoder, Hugging Face, linguistics,
                  neglab},
-  status      = {active}
+  status      = {active},
+  related     = {INF:Surprisal:2025}
 }
 
 # -------------------------------------------------
@@ -484,6 +469,121 @@
 # PROJECTS:
 # -------------------------------------------------
 # -------------------------------------------------
+
+@project{INF:OpenWebUI:2025,
+  name        = {OpenWebUI and Local LLM Hosting},
+  subtitle    = {Providing access to locally hosted large language models for the CRC},
+  author      = {Hammerla, Leon and Abrami, Giuseppe},
+  year        = {2025},
+  abstract    = {We set up and host an OpenWebUI instance for the CRC, providing
+                 researchers with access to large language models running on
+                 local servers. The infrastructure enables the use of generative
+                 AI models within the CRC while keeping model execution and data
+                 processing on institutional infrastructure.},
+  url         = {https://llm.neglab.de},
+  projectlink = {https://llm.neglab.de},
+  keywords    = {OpenWebUI, large language models, LLM, infrastructure, hosting, neglab},
+  note        = {active}
+}
+
+@project{INF:LabelStudio:2025,
+  name        = {Label Studio Annotation Platform},
+  subtitle    = {A centrally hosted annotation environment for the CRC},
+  author      = {Hammerla, Leon},
+  year        = {2025},
+  abstract    = {We host and maintain a Label Studio instance for the CRC.
+                 The platform supports collaborative data annotation projects
+                 and provides researchers with a central environment for
+                 creating annotation tasks, managing annotators, and exporting
+                 annotated datasets.},
+  url         = {https://anno.neglab.de},
+  projectlink = {https://anno.neglab.de},
+  keywords    = {Label Studio, annotation, datasets, collaboration, hosting, neglab},
+  note        = {active}
+}
+
+@project{INF:Slurm:2026,
+  name        = {Slurm HPC Infrastructure},
+  subtitle    = {Distributed process execution and resource management on CRC servers},
+  author      = {Abrami, Giuseppe},
+  year        = {2026},
+  abstract    = {We set up and maintain a Slurm workload management system on
+                 the CRC servers. The system supports high-performance and
+                 distributed computing by scheduling computational jobs,
+                 allocating server resources, and managing parallel process
+                 execution.},
+  url         = {},
+  projectlink = {},
+  keywords    = {Slurm, HPC, job scheduling, distributed computing, infrastructure, neglab},
+  note        = {active}
+}
+
+@project{INF:SurrealDB:2025,
+  name        = {SurrealDB Data-Sharing Infrastructure},
+  subtitle    = {Structured and role-based access to shared CRC data},
+  author      = {Hammerla, Leon},
+  year        = {2025},
+  abstract    = {We host and maintain a SurrealDB instance to support data
+                 accessibility and sharing within the CRC. The infrastructure
+                 provides separate namespaces and databases as well as a
+                 user- and role-management system for controlling access to
+                 different datasets and resources.},
+  url         = {https://databases.neglab.de},
+  projectlink = {https://databases.neglab.de},
+  keywords    = {SurrealDB, database, data sharing, access management, infrastructure, neglab},
+  note        = {active}
+}
+
+@project{INF:DigitalDataManagementProtocol,
+  name        = {Digital Data Management Protocol},
+  subtitle    = {A web-based tool for creating and exporting data management protocols},
+  author      = {},
+  year        = {2025},
+  abstract    = {We developed a web-based digital data management protocol that
+                 can be completed interactively by researchers. Once filled
+                 out, the protocol can be downloaded for documentation and
+                 further use. The application is currently hosted on the CRC
+                 servers.},
+  url         = {https://metadata.neglab.de},
+  projectlink = {https://metadata.neglab.de},
+  keywords    = {data management, protocol, web application, documentation, hosting, neglab},
+  note        = {active}
+}
+
+@project{INF:Surprisal:2025,
+  name        = {Surprisal Program},
+  subtitle    = {A Python-based tool for calculating surprisal values},
+  author      = {Hammerla, Leon and Martinez Bruera, Mercedes},
+  year        = {2025},
+  abstract    = {We developed a Python-based tool for calculating surprisal
+                 values for textual data stored in CSV files. The program
+                 supports multiple language models available through Hugging
+                 Face and provides a unified workflow for working with both
+                 decoder-based and encoder-based model architectures.},
+  url         = {https://github.com/LeonHammerla/surprisal_program},
+  projectlink = {https://github.com/LeonHammerla/surprisal_program},
+  keywords    = {surprisal, LLMs, encoder, decoder, Hugging Face, linguistics,
+                 neglab},
+  note        = {active}
+}
+
+@project{INF:MoTR:2025,
+  name        = {Mouse Tracking for Reading},
+  subtitle    = {A browser-based experiment for collecting word-by-word reading measures},
+  author      = {Hammerla, Leon and Eichler, Elisabeth},
+  year        = {2025},
+  abstract    = {We deployed and maintain a Mouse Tracking for Reading (MoTR)
+                 experiment on the CRC server infrastructure. The application
+                 uses separate domains for the browser-based experimental
+                 frontend and the Magpie backend, enabling the collection and
+                 management of word-by-word reading measures derived from
+                 participants' mouse movements.},
+  url         = {https://magpie.neglab.de},
+  projectlink = {https://github.com/LeonHammerla/MoTR},
+  keywords    = {mouse tracking, reading times, psycholinguistics, experiments,
+                 language processing, data processing, neglab},
+  note        = {active}
+}
 
 @project{INF:ItalDia:2025,
   name        = {LLM Annotation Pipeline},

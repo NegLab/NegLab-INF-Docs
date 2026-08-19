@@ -8,6 +8,8 @@ Reusable software, hosted services, infrastructure resources, and reusable
 workflows belong in `@tool`; see
 [TOOL_BIBTEX_SCHEMA.md](TOOL_BIBTEX_SCHEMA.md). A project may produce a tool,
 but the activity and the reusable result remain separate catalogue objects.
+Keep the original `@project` entry and key when adding the corresponding
+`@tool`; the same work can therefore appear in both catalogue sections.
 
 ## Example
 

@@ -124,6 +124,34 @@ class PublicationToolTests(unittest.TestCase):
     def test_tool_is_a_supported_catalogue_entry_type(self) -> None:
         self.assertIn("tool", supported_entry_types())
 
+    def test_mouse_tracking_is_catalogued_as_a_project(self) -> None:
+        catalogue_path = Path(__file__).resolve().parent.parent / "data/neglab-inf.bib"
+        entries = parse_bibtex(text=catalogue_path.read_text(encoding="utf-8"), source=str(catalogue_path))
+        mouse_tracking = next(entry for entry in entries if entry["bib_key"] == "INF:MoTR:2025")
+        self.assertEqual(mouse_tracking["entry_type"], "project")
+
+    def test_tools_keep_separate_project_or_publication_counterparts(self) -> None:
+        catalogue_path = Path(__file__).resolve().parent.parent / "data/neglab-inf.bib"
+        entries = parse_bibtex(text=catalogue_path.read_text(encoding="utf-8"), source=str(catalogue_path))
+        entries_by_key = {entry["bib_key"]: entry for entry in entries}
+        self.assertEqual(len(entries_by_key), len(entries))
+
+        counterparts = {
+            "INF:RT-SEG": ("Hammerla:etal:2026:c", "inproceedings"),
+            "INF:DUUI": ("Abrami:et:al:2025:a", "article"),
+            "INF:OpenWebUI": ("INF:OpenWebUI:2025", "project"),
+            "INF:LabelStudio": ("INF:LabelStudio:2025", "project"),
+            "INF:Slurm": ("INF:Slurm:2026", "project"),
+            "INF:SurrealDB": ("INF:SurrealDB:2025", "project"),
+            "INF:DigitalDataManagementProtocol:Tool": ("INF:DigitalDataManagementProtocol", "project"),
+            "INF:Surprisal": ("INF:Surprisal:2025", "project"),
+        }
+        for tool_key, (counterpart_key, counterpart_type) in counterparts.items():
+            with self.subTest(tool_key=tool_key):
+                self.assertEqual(entries_by_key[tool_key]["entry_type"], "tool")
+                self.assertEqual(entries_by_key[counterpart_key]["entry_type"], counterpart_type)
+                self.assertEqual(entries_by_key[tool_key]["fields"]["related"], counterpart_key)
+
     def test_build_reads_inputs_without_modifying_them(self) -> None:
         with tempfile.TemporaryDirectory() as temporary_directory:
             root = Path(temporary_directory)
@@ -149,7 +177,15 @@ class PublicationToolTests(unittest.TestCase):
             self.assertEqual(project_data.read_bytes(), json_before)
             self.assertTrue((root / "docs/assets/inf_logo.svg").is_file())
             index = (root / "docs/index.html").read_text(encoding="utf-8")
-            self.assertIn('src="assets/inf_logo.svg"', index)
+            self.assertNotIn('class="hero-logo"', index)
+            self.assertNotIn('src="assets/inf_logo.svg"', index)
+            self.assertIn('class="section-navigation"', index)
+            self.assertEqual(index.count('class="section-panel"'), 4)
+            self.assertIn('<h2>About INF</h2>', index)
+            self.assertIn('<h2>People</h2>', index)
+            self.assertIn('<h2>Tools &amp; Services</h2>', index)
+            self.assertIn('<h2>Projects &amp; Publications</h2>', index)
+            self.assertIn("<strong>2</strong><span>Team members</span>", index)
             self.assertIn("<strong>1</strong><span>Tools</span>", index)
             self.assertIn("<strong>1</strong><span>Projects</span>", index)
             self.assertIn("<strong>1</strong><span>Publications</span>", index)

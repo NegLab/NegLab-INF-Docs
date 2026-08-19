@@ -9,6 +9,9 @@ Projects and tools are separate catalogue objects. A research, development,
 annotation, or collaboration activity belongs in `@project`, even when that
 activity produces a tool. The reusable result may be described separately as
 an `@tool` entry and connected to its project or publications with `related`.
+These categories are additive: adding the tool must not convert, remove, or
+replace the existing project or publication entry. Both objects are displayed
+in their respective homepage catalogues.
 
 ## Example
 
@@ -80,8 +83,10 @@ generator can use `note` as a fallback when a tool has no `status` field.
 - Prefer a stable tool key without a year, such as `INF:DUUI`. The `year`
   field records the first release or provision date while the key identifies
   the persistent catalogue entity.
-- Do not rename existing keys merely to remove a year; keys determine existing
-  stable page filenames.
+- When a tool is based on an existing project or publication, preserve the
+  original entry and its key. Give the tool a separate stable key and connect
+  it to the original with `related`. If the natural yearless key is already in
+  use, add a descriptive suffix such as `:Tool`.
 - Store `url`, `projectlink`, and `documentation` as absolute HTTP or HTTPS
   URLs.
 - Keep `abstract` suitable for public display and avoid LaTeX layout commands.
