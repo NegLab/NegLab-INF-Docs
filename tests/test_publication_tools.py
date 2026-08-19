@@ -44,6 +44,23 @@ class PublicationToolTests(unittest.TestCase):
   abstract = {A repository for exploring negation data.},
   keywords = {software, data}
 }
+
+@tool{Example:Tool,
+  name = {Example Tool},
+  subtitle = {A reusable test service},
+  author = {Roe, Richard},
+  maintainer = {Doe, Jane},
+  year = {2026},
+  tooltype = {software},
+  status = {active},
+  access = {Public},
+  url = {https://example.org/tool},
+  documentation = {https://example.org/docs},
+  projectlink = {https://github.com/example/tool},
+  abstract = {Example reusable tool.},
+  keywords = {testing, reusable software},
+  license = {MIT}
+}
 """,
             encoding="utf-8",
         )
@@ -104,6 +121,9 @@ class PublicationToolTests(unittest.TestCase):
         self.assertEqual(entries[0]["bib_key"], "key")
         self.assertEqual(entries[0]["fields"]["title"], "{Nested} title")
 
+    def test_tool_is_a_supported_catalogue_entry_type(self) -> None:
+        self.assertIn("tool", supported_entry_types())
+
     def test_build_reads_inputs_without_modifying_them(self) -> None:
         with tempfile.TemporaryDirectory() as temporary_directory:
             root = Path(temporary_directory)
@@ -116,21 +136,60 @@ class PublicationToolTests(unittest.TestCase):
 
             self.assertEqual(
                 result,
-                {"generated": 2, "total": 2, "publications": 1, "ignored": 0},
+                {
+                    "generated": 3,
+                    "total": 3,
+                    "tools": 1,
+                    "projects": 1,
+                    "publications": 1,
+                    "ignored": 0,
+                },
             )
             self.assertEqual(bibliography.read_bytes(), bib_before)
             self.assertEqual(project_data.read_bytes(), json_before)
             self.assertTrue((root / "docs/assets/inf_logo.svg").is_file())
             index = (root / "docs/index.html").read_text(encoding="utf-8")
             self.assertIn('src="assets/inf_logo.svg"', index)
-            self.assertIn("<strong>2</strong><span>Projects</span>", index)
+            self.assertIn("<strong>1</strong><span>Tools</span>", index)
+            self.assertIn("<strong>1</strong><span>Projects</span>", index)
             self.assertIn("<strong>1</strong><span>Publications</span>", index)
+            self.assertIn('id="tools"', index)
+            self.assertIn('id="tool-search"', index)
+            self.assertIn('id="catalogue-search"', index)
             self.assertIn("Editable project description.", index)
             self.assertIn("Jane Doe", index)
+            tool_section = index.split('<section class="publication-section tool-section" id="tools">', maxsplit=1)[1]
+            tool_section, catalogue_section = tool_section.split('<section class="publication-section" id="projects">', maxsplit=1)
+            self.assertIn("Example Tool", tool_section)
+            self.assertNotIn("Negation Data Explorer", tool_section)
+            self.assertNotIn("A useful result", tool_section)
+            self.assertNotIn("Example Tool", catalogue_section)
+            self.assertIn("Negation Data Explorer", catalogue_section)
+            self.assertIn("A useful result", catalogue_section)
             manifest = json.loads((root / "docs/publications/index.json").read_text(encoding="utf-8"))
             project = next(item for item in manifest["publications"] if item["bib_key"] == "Repository:2026")
-            page = (root / "docs/publications" / project["filename"]).read_text(encoding="utf-8")
-            self.assertIn("https://github.com/example/explorer-source", page)
+            project_page = (root / "docs/publications" / project["filename"]).read_text(encoding="utf-8")
+            self.assertIn("https://github.com/example/explorer-source", project_page)
+            self.assertIn("Project details", project_page)
+            self.assertIn("Visit project", project_page)
+
+            publication = next(item for item in manifest["publications"] if item["bib_key"] == "Doe:2026")
+            publication_page = (root / "docs/publications" / publication["filename"]).read_text(encoding="utf-8")
+            self.assertIn("Publication details", publication_page)
+            self.assertIn("View publication", publication_page)
+
+            tool = next(item for item in manifest["publications"] if item["bib_key"] == "Example:Tool")
+            self.assertEqual(tool["entry_type"], "tool")
+            tool_page = (root / "docs/publications" / tool["filename"]).read_text(encoding="utf-8")
+            self.assertIn("Tool details", tool_page)
+            self.assertIn("Open tool", tool_page)
+            self.assertIn("Documentation", tool_page)
+            self.assertIn("Jane Doe", tool_page)
+            self.assertIn("Software", tool_page)
+            self.assertIn("Active", tool_page)
+            self.assertIn("Public", tool_page)
+            self.assertIn("MIT", tool_page)
+            self.assertIn("@tool{Example:Tool,", tool_page)
 
     def test_every_build_replaces_the_complete_output_directory(self) -> None:
         with tempfile.TemporaryDirectory() as temporary_directory:
@@ -144,7 +203,7 @@ class PublicationToolTests(unittest.TestCase):
 
             result = self._build(root=root, bib_path=bibliography)
 
-            self.assertEqual(result["generated"], 2)
+            self.assertEqual(result["generated"], 3)
             self.assertFalse(stale_file.exists())
             self.assertFalse(stale_page.exists())
             self.assertTrue((root / "docs/assets/site.css").is_file())
@@ -162,6 +221,8 @@ class PublicationToolTests(unittest.TestCase):
             result = self._build(root=root, bib_path=bibliography)
 
             self.assertEqual(result["total"], 1)
+            self.assertEqual(result["tools"], 0)
+            self.assertEqual(result["projects"], 1)
             self.assertEqual(result["publications"], 0)
             pages = list((root / "docs/publications").glob("*.html"))
             self.assertEqual(len(pages), 1)
@@ -171,7 +232,12 @@ class PublicationToolTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temporary_directory:
             root = Path(temporary_directory)
             bib_path = root / "duplicate.bib"
-            bib_path.write_text("@article{same,title={One}}\n@book{same,title={Two}}", encoding="utf-8")
+            bib_path.write_text(
+                "@article{same,title={One}}\n"
+                "@project{same,name={Two}}\n"
+                "@tool{same,name={Three},tooltype={software}}",
+                encoding="utf-8",
+            )
             with self.assertRaisesRegex(ValueError, "Duplicate BibTeX key"):
                 self._build(root=root, bib_path=bib_path)
 

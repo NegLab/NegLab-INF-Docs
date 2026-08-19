@@ -92,7 +92,8 @@ button, input, select { font: inherit; }
 .person-card h3 svg { color: var(--blue); font-size: .72rem; }
 .person-card p { margin: .3rem 0 0; color: var(--muted); font-size: .68rem; line-height: 1.4; }
 
-.publication-section { width: min(1120px, calc(100% - 2.5rem)); margin: 0 auto; padding: clamp(5rem, 8vw, 8rem) 0; }
+.publication-section { width: min(1120px, calc(100% - 2.5rem)); margin: 0 auto; padding: clamp(5rem, 8vw, 8rem) 0; scroll-margin-top: 1rem; }
+.tool-section { padding-bottom: 0; }
 .section-heading { margin-bottom: 2rem; display: flex; align-items: end; justify-content: space-between; gap: 3rem; }
 .section-heading h2 { margin: .35rem 0 0; font-size: clamp(2rem, 4vw, 3.2rem); line-height: 1.1; letter-spacing: -.04em; }
 .section-heading p { max-width: 490px; margin: 0; color: var(--muted); }
@@ -120,6 +121,14 @@ button, input, select { font: inherit; }
 .venue { color: #316477; font-style: italic; }
 .status-chip { display: inline-flex; width: max-content; padding: .22rem .5rem; color: #7f4263; background: var(--pink-soft); border-radius: 100px; font-size: .62rem; font-weight: 800; line-height: 1.4; text-transform: uppercase; }
 .card-arrow { position: relative; z-index: 2; display: grid; place-items: center; width: 38px; height: 38px; color: var(--blue); background: var(--blue-pale); border-radius: 50%; text-decoration: none; }
+.tool-card { min-height: 184px; }
+.tool-meta span { font-size: 1.05rem; letter-spacing: -.02em; }
+.tool-meta small { margin-top: .22rem; color: var(--pink-dark); font-weight: 750; text-transform: uppercase; }
+.tool-summary { display: -webkit-box; margin: .4rem 0 0; overflow: hidden; color: #316477; font-size: .86rem; line-height: 1.55; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
+.tool-maintainers { margin: .55rem 0 0; color: var(--muted); font-size: .78rem; }
+.tool-maintainers strong { color: #294b58; }
+.tool-keywords { position: relative; z-index: 2; margin-top: .7rem; display: flex; flex-wrap: wrap; gap: .35rem; }
+.tool-keywords span { padding: .2rem .48rem; color: var(--blue-dark); background: var(--blue-pale); border-radius: 100px; font-size: .62rem; font-weight: 650; }
 .empty-state { padding: 4rem 1rem; text-align: center; background: white; border: 1px dashed #b9c8c4; border-radius: var(--radius); }
 .empty-state > span { display: grid; place-items: center; width: 50px; height: 50px; margin: 0 auto; color: var(--blue); background: var(--blue-pale); border-radius: 50%; }
 .empty-state h3 { margin: 1rem 0 .2rem; }
@@ -134,6 +143,7 @@ button, input, select { font: inherit; }
 .paper-header h1 { max-width: 940px; margin: 1.1rem 0 .65rem; font-size: clamp(2rem, 5vw, 3.7rem); line-height: 1.08; letter-spacing: -.045em; text-wrap: balance; }
 .subtitle { max-width: 850px; margin: 0 0 1rem; color: #cceaf5; font-size: 1.15rem; }
 .detail-authors { margin: 1.25rem 0 .25rem; color: #eef9fc; font-size: 1rem; }
+.tool-authors { margin: .15rem 0 0; color: #b8e1f1; font-size: .8rem; }
 .detail-venue { margin: .1rem 0 0; color: #b8e1f1; font-size: .88rem; font-style: italic; }
 .paper-actions { margin-top: 2rem; display: flex; flex-wrap: wrap; gap: .65rem; }
 .paper-actions .button-secondary { color: white; background: rgba(255,255,255,.08); border-color: rgba(255,255,255,.22); }
@@ -171,6 +181,7 @@ footer p { margin: .25rem 0 0; color: #b8e1f1; font-size: .78rem; }
 @media (max-width: 760px) {
   .site-header { min-height: 68px; }
   .brand small, .site-header nav a:nth-child(-n+2) { display: none; }
+  .site-header nav a:last-child { display: none; }
   .hero { min-height: 0; padding-top: 4.5rem; padding-bottom: 5.5rem; }
   .stats { grid-template-columns: 1fr; padding: .4rem 1.2rem; }
   .stats div { padding: .8rem 0; flex-direction: row; align-items: baseline; gap: .65rem; }
@@ -192,6 +203,12 @@ footer p { margin: .25rem 0 0; color: #b8e1f1; font-size: .78rem; }
   .paper-layout { grid-template-columns: 1fr; }
   .paper-facts { position: static; }
   footer { align-items: flex-start; flex-direction: column; gap: 1rem; }
+}
+
+@media (max-width: 520px) {
+  .brand > span:last-child { display: none; }
+  .site-header nav { gap: .75rem; }
+  .site-header nav a { font-size: .72rem; }
 }
 
 @media (prefers-reduced-motion: reduce) {

@@ -1,54 +1,99 @@
 document.addEventListener("DOMContentLoaded", () => {
-  const search = document.querySelector("#publication-search");
-  const yearFilter = document.querySelector("#year-filter");
-  const typeFilter = document.querySelector("#type-filter");
-  const cards = [...document.querySelectorAll(".publication-card")];
-  const resultCount = document.querySelector("#result-count");
-  const clearFilters = document.querySelector("#clear-filters");
-  const emptyState = document.querySelector("#empty-state");
+  const setupFilters = ({
+    searchId,
+    listId,
+    resultId,
+    clearId,
+    emptyId,
+    filters,
+    singular,
+    plural,
+  }) => {
+    const search = document.querySelector(`#${searchId}`);
+    const list = document.querySelector(`#${listId}`);
+    const cards = list ? [...list.querySelectorAll(".publication-card")] : [];
+    const resultCount = document.querySelector(`#${resultId}`);
+    const clearFilters = document.querySelector(`#${clearId}`);
+    const emptyState = document.querySelector(`#${emptyId}`);
+    const filterControls = filters.map(({ id, data }) => ({
+      element: document.querySelector(`#${id}`),
+      data,
+    }));
 
-  const applyFilters = () => {
-    const query = search?.value.trim().toLocaleLowerCase() ?? "";
-    const year = yearFilter?.value ?? "";
-    const type = typeFilter?.value ?? "";
-    let visible = 0;
+    const applyFilters = () => {
+      const query = search?.value.trim().toLocaleLowerCase() ?? "";
+      let visible = 0;
 
-    cards.forEach((card) => {
-      const matches = (!query || card.dataset.search.includes(query))
-        && (!year || card.dataset.year === year)
-        && (!type || card.dataset.type === type);
-      card.hidden = !matches;
-      if (matches) visible += 1;
+      cards.forEach((card) => {
+        const matchesSearch = !query || (card.dataset.search ?? "").includes(query);
+        const matchesFilters = filterControls.every(({ element, data }) => (
+          !element?.value || card.dataset[data] === element.value
+        ));
+        const matches = matchesSearch && matchesFilters;
+        card.hidden = !matches;
+        if (matches) visible += 1;
+      });
+
+      if (resultCount) resultCount.textContent = `${visible} ${visible === 1 ? singular : plural}`;
+      const hasFilters = Boolean(query || filterControls.some(({ element }) => element?.value));
+      if (clearFilters) clearFilters.hidden = !hasFilters;
+      if (emptyState) emptyState.hidden = visible !== 0;
+    };
+
+    search?.addEventListener("input", applyFilters);
+    filterControls.forEach(({ element }) => element?.addEventListener("change", applyFilters));
+    clearFilters?.addEventListener("click", () => {
+      if (search) search.value = "";
+      filterControls.forEach(({ element }) => {
+        if (element) element.value = "";
+      });
+      applyFilters();
+      search?.focus();
     });
-
-    if (resultCount) resultCount.textContent = `${visible} project${visible === 1 ? "" : "s"}`;
-    if (clearFilters) clearFilters.hidden = !(query || year || type);
-    if (emptyState) emptyState.hidden = visible !== 0;
+    if (list || resultCount) applyFilters();
   };
 
-  search?.addEventListener("input", applyFilters);
-  yearFilter?.addEventListener("change", applyFilters);
-  typeFilter?.addEventListener("change", applyFilters);
-  clearFilters?.addEventListener("click", () => {
-    search.value = "";
-    yearFilter.value = "";
-    typeFilter.value = "";
-    applyFilters();
-    search.focus();
+  setupFilters({
+    searchId: "tool-search",
+    listId: "tool-list",
+    resultId: "tool-result-count",
+    clearId: "tool-clear-filters",
+    emptyId: "tool-empty-state",
+    filters: [
+      { id: "tool-type-filter", data: "tooltype" },
+      { id: "tool-status-filter", data: "status" },
+    ],
+    singular: "tool",
+    plural: "tools",
   });
-  if (cards.length || resultCount) applyFilters();
+
+  setupFilters({
+    searchId: "catalogue-search",
+    listId: "catalogue-list",
+    resultId: "catalogue-result-count",
+    clearId: "catalogue-clear-filters",
+    emptyId: "catalogue-empty-state",
+    filters: [
+      { id: "catalogue-year-filter", data: "year" },
+      { id: "catalogue-type-filter", data: "type" },
+    ],
+    singular: "entry",
+    plural: "entries",
+  });
 
   document.querySelector("[data-copy-bib]")?.addEventListener("click", async (event) => {
     const button = event.currentTarget;
-    const bibtex = document.querySelector("#bibtex-entry")?.textContent ?? "";
+    const bibtexEntry = document.querySelector("#bibtex-entry");
+    const bibtex = bibtexEntry?.textContent ?? "";
     try {
       await navigator.clipboard.writeText(bibtex);
       button.textContent = "Copied";
       window.setTimeout(() => { button.textContent = "Copy"; }, 1600);
     } catch (_) {
+      if (!bibtexEntry) return;
       const selection = window.getSelection();
       const range = document.createRange();
-      range.selectNodeContents(document.querySelector("#bibtex-entry"));
+      range.selectNodeContents(bibtexEntry);
       selection.removeAllRanges();
       selection.addRange(range);
     }

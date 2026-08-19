@@ -1,11 +1,12 @@
-# NegLab INF project catalogue
+# NegLab INF catalogue
 
-Static GitHub Pages catalogue for projects and publications of the INF
+Static GitHub Pages catalogue for tools, projects, and publications of the INF
 subproject of CRC 1629 NegLaB. The complete site is generated with
 dependency-free Python from two manually maintained content files and one logo
 asset:
 
-- `data/neglab-inf.bib` contains projects, publications, and their links.
+- `data/neglab-inf.bib` is the single authoritative catalogue source for
+  tools, projects, publications, and their links.
 - `data/inf-project.json` contains the INF description, services, research
   areas, related links, contact text, and people.
 - `data/inf_logo.svg` is the INF logo displayed in the homepage hero and
@@ -40,12 +41,22 @@ python3 src/build_publications.py --docs-dir /tmp/neglab-inf-preview
 
 The selected output directory is replaced completely during the build.
 
-## Editing projects and publications
+## Editing tools, projects, and publications
 
 Edit `data/neglab-inf.bib` directly. Standard BibTeX publication types such as
 `@article`, `@inproceedings`, and `@techreport` are supported. The catalogue
-also accepts the project-specific `@project` type for software, datasets,
-services, repositories, and ongoing or unpublished work.
+also accepts two NegLab INF-specific entry types:
+
+- `@tool` for reusable software, hosted services, infrastructure, and
+  workflows made available by INF.
+- `@project` for research, development, annotation, and collaboration
+  activities carried out by INF.
+
+All three categories live in the same `data/neglab-inf.bib` file. Do not create
+a separate tool catalogue or data file. See
+[TOOL_BIBTEX_SCHEMA.md](TOOL_BIBTEX_SCHEMA.md) and
+[PROJECT_BIBTEX_SCHEMA.md](PROJECT_BIBTEX_SCHEMA.md) for their complete
+schemas and the distinction between them.
 
 Each entry must have a unique BibTeX key. That key determines its stable,
 collision-resistant filename under `docs/publications/`. Duplicate keys stop
@@ -59,14 +70,22 @@ projectlink = {https://github.com/example/project},
 
 The link fields have distinct uses:
 
-- `url`: primary project or publication landing page, shown as “Visit project”
-  or “View publication”.
+- `url`: primary tool, project, or publication landing page, shown as “Open
+  tool”, “Visit project”, or “View publication”.
 - `projectlink`: code repository or archival record, shown as “Code & archive”.
+- `documentation`: dedicated tool documentation, shown as “Documentation” on
+  `@tool` detail pages.
 - `pdf`: direct PDF link.
 
 If `projectlink` is absent, the detail page displays an empty disabled
-placeholder. See [PROJECT_BIBTEX_SCHEMA.md](PROJECT_BIBTEX_SCHEMA.md) for the
-complete proposed `@project` schema.
+placeholder.
+
+After adding or editing a tool, project, or publication, rebuild in exactly the
+same way:
+
+```bash
+python3 src/build_publications.py
+```
 
 ## Editing the homepage and people
 
@@ -92,8 +111,9 @@ After any BibTeX or JSON edit, run the normal build command again.
 
 The build writes:
 
-- `docs/index.html`: INF information, people, statistics, and the searchable
-  project catalogue.
+- `docs/index.html`: INF information, people, category statistics, a searchable
+  Tools & Services catalogue, and a separate searchable Projects &
+  Publications catalogue.
 - `docs/publications/*.html`: one detail page per supported BibTeX entry.
 - `docs/publications/index.json`: mapping from BibTeX keys to generated files.
 - `docs/assets/`: the stylesheet, JavaScript, and copied INF logo used by

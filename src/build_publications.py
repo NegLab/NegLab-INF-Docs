@@ -193,13 +193,13 @@ def _valid_web_url(*, url: str) -> bool:
     return parsed.scheme in {"http", "https"} and bool(parsed.netloc)
 
 
-def _entry_to_publication(*, entry: dict[str, object]) -> dict[str, object]:
+def _entry_to_catalogue_entry(*, entry: dict[str, object]) -> dict[str, object]:
     fields = entry["fields"]
     if not isinstance(fields, dict):
         raise TypeError("BibTeX fields must be a dictionary")
     text_fields = {str(key): str(value) for key, value in fields.items()}
     entry_type = str(entry["entry_type"])
-    title = _latex_to_text(value=text_fields.get("title", text_fields.get("name", "Untitled project")))
+    title = _latex_to_text(value=text_fields.get("title", text_fields.get("name", "Untitled entry")))
     subtitle = _latex_to_text(value=text_fields.get("subtitle", ""))
     venue = _latex_to_text(
         value=text_fields.get("journal", text_fields.get("booktitle", text_fields.get("institution", "")))
@@ -214,6 +214,9 @@ def _entry_to_publication(*, entry: dict[str, object]) -> dict[str, object]:
     projectlink = text_fields.get("projectlink", "").strip()
     if not _valid_web_url(url=projectlink):
         projectlink = ""
+    documentation = text_fields.get("documentation", "").strip()
+    if not _valid_web_url(url=documentation):
+        documentation = ""
     keywords = [
         _latex_to_text(value=item.strip())
         for item in re.split(r"[,;]", text_fields.get("keywords", ""))
@@ -230,8 +233,13 @@ def _entry_to_publication(*, entry: dict[str, object]) -> dict[str, object]:
         "proceedings": "Proceedings",
         "project": "Project",
         "techreport": "Technical report",
+        "tool": "Tool",
         "unpublished": "Preprint",
     }
+    note = _latex_to_text(value=text_fields.get("note", text_fields.get("pubstate", "")))
+    status = _latex_to_text(value=text_fields.get("status", ""))
+    if entry_type == "tool" and not status:
+        status = note
     return {
         "bib_key": str(entry["bib_key"]),
         "entry_type": entry_type,
@@ -239,14 +247,26 @@ def _entry_to_publication(*, entry: dict[str, object]) -> dict[str, object]:
         "title": title,
         "subtitle": subtitle,
         "authors": _author_names(value=text_fields.get("author", text_fields.get("editor", ""))),
+        "maintainers": _author_names(value=text_fields.get("maintainer", "")),
         "year": _latex_to_text(value=text_fields.get("year", "Undated")),
         "venue": venue,
+        "institution": _latex_to_text(value=text_fields.get("institution", "")),
         "volume": _latex_to_text(value=text_fields.get("volume", "")),
         "number": _latex_to_text(value=text_fields.get("number", "")),
         "pages": _latex_to_text(value=text_fields.get("pages", "")),
         "publisher": _latex_to_text(value=text_fields.get("publisher", "")),
         "address": _latex_to_text(value=text_fields.get("address", text_fields.get("location", ""))),
-        "note": _latex_to_text(value=text_fields.get("note", text_fields.get("pubstate", ""))),
+        "note": note,
+        "tooltype": _latex_to_text(value=text_fields.get("tooltype", "")).casefold(),
+        "documentation": documentation,
+        "access": _latex_to_text(value=text_fields.get("access", "")),
+        "status": status.casefold(),
+        "license": _latex_to_text(value=text_fields.get("license", "")),
+        "related": [
+            _latex_to_text(value=item.strip())
+            for item in re.split(r"[,;]", text_fields.get("related", ""))
+            if item.strip()
+        ],
         "abstract": _latex_to_text(value=text_fields.get("abstract", "")),
         "keywords": keywords,
         "doi": doi,
@@ -326,10 +346,10 @@ def _page_shell(
       <span class="brand-mark">INF</span>
       <span><strong>{_escape(value=project_name)}</strong><small>Information Infrastructure</small></span>
     </a>
-    <nav aria-label="Main navigation"><a href="{asset_prefix}index.html#about">About</a><a href="{asset_prefix}index.html#people">People</a><a href="{asset_prefix}index.html#projects">Projects</a><a href="https://www.neglab.de/" rel="noopener noreferrer">NegLaB {_icon(name='external')}</a></nav>
+    <nav aria-label="Main navigation"><a href="{asset_prefix}index.html#about">About</a><a href="{asset_prefix}index.html#people">People</a><a href="{asset_prefix}index.html#tools">Tools &amp; Services</a><a href="{asset_prefix}index.html#projects">Projects &amp; Publications</a><a href="https://www.neglab.de/" rel="noopener noreferrer">NegLaB {_icon(name='external')}</a></nav>
   </header>
   <main id="main-content">{body}</main>
-  <footer><div><strong>{_escape(value=project_name)}</strong><p>Projects and information infrastructure for collaborative negation research.</p></div><p>CRC 1629 · Goethe University Frankfurt</p></footer>
+  <footer><div><strong>{_escape(value=project_name)}</strong><p>Tools, projects, publications, and information infrastructure for collaborative negation research.</p></div><p>CRC 1629 · Goethe University Frankfurt</p></footer>
 </body>
 </html>
 """
@@ -339,22 +359,63 @@ def _format_author_list(*, authors: list[str]) -> str:
     return ", ".join(_escape(value=author) for author in authors) if authors else "Unknown authors"
 
 
-def _render_index_card(*, publication: dict[str, object]) -> str:
-    authors = publication["authors"] if isinstance(publication["authors"], list) else []
-    keywords = publication["keywords"] if isinstance(publication["keywords"], list) else []
+def _render_catalogue_card(*, entry: dict[str, object]) -> str:
+    authors = entry["authors"] if isinstance(entry["authors"], list) else []
+    keywords = entry["keywords"] if isinstance(entry["keywords"], list) else []
     searchable = " ".join(
-        [str(publication["title"]), *[str(author) for author in authors], str(publication["venue"]), *[str(k) for k in keywords]]
+        [
+            str(entry["title"]),
+            str(entry["subtitle"]),
+            str(entry["abstract"]),
+            *[str(author) for author in authors],
+            str(entry["venue"]),
+            *[str(keyword) for keyword in keywords],
+        ]
     ).lower()
-    venue = f'<p class="venue">{_escape(value=publication["venue"])}</p>' if publication["venue"] else ""
+    venue = f'<p class="venue">{_escape(value=entry["venue"])}</p>' if entry["venue"] else ""
     author_line = f'<p class="authors">{_format_author_list(authors=authors)}</p>' if authors else ""
-    note = f'<span class="status-chip">{_escape(value=publication["note"])}</span>' if publication["note"] else ""
-    return f"""<article class="publication-card" data-year="{_escape(value=publication['year'])}" data-type="{_escape(value=publication['entry_type'])}" data-search="{_escape(value=searchable)}">
-  <div class="card-year"><span>{_escape(value=publication['year'])}</span><small>{_escape(value=publication['type_label'])}</small></div>
+    note = f'<span class="status-chip">{_escape(value=entry["note"])}</span>' if entry["note"] else ""
+    return f"""<article class="publication-card" data-year="{_escape(value=entry['year'])}" data-type="{_escape(value=entry['entry_type'])}" data-search="{_escape(value=searchable)}">
+  <div class="card-year"><span>{_escape(value=entry['year'])}</span><small>{_escape(value=entry['type_label'])}</small></div>
   <div class="card-content">
-    <div class="card-heading"><h3><a href="publications/{_escape(value=publication['filename'])}">{_escape(value=publication['title'])}</a></h3>{note}</div>
+    <div class="card-heading"><h3><a href="publications/{_escape(value=entry['filename'])}">{_escape(value=entry['title'])}</a></h3>{note}</div>
     {author_line}{venue}
   </div>
-  <a class="card-arrow" href="publications/{_escape(value=publication['filename'])}" aria-label="View {_escape(value=publication['title'])}">{_icon(name='arrow')}</a>
+  <a class="card-arrow" href="publications/{_escape(value=entry['filename'])}" aria-label="View {_escape(value=entry['title'])}">{_icon(name='arrow')}</a>
+</article>"""
+
+
+def _render_tool_card(*, entry: dict[str, object]) -> str:
+    maintainers = entry["maintainers"] if isinstance(entry["maintainers"], list) else []
+    keywords = entry["keywords"] if isinstance(entry["keywords"], list) else []
+    searchable = " ".join(
+        [
+            str(entry["title"]),
+            str(entry["subtitle"]),
+            str(entry["abstract"]),
+            *[str(maintainer) for maintainer in maintainers],
+            *[str(keyword) for keyword in keywords],
+            str(entry["tooltype"]),
+        ]
+    ).lower()
+    subtitle = str(entry["subtitle"]) or str(entry["abstract"])
+    maintainer_line = (
+        f'<p class="tool-maintainers"><strong>Maintained by</strong> {_format_author_list(authors=maintainers)}</p>'
+        if maintainers
+        else ""
+    )
+    keyword_html = "".join(f'<span>{_escape(value=keyword)}</span>' for keyword in keywords[:4])
+    keyword_line = f'<div class="tool-keywords">{keyword_html}</div>' if keyword_html else ""
+    tooltype = str(entry["tooltype"])
+    status = str(entry["status"])
+    status_chip = f'<span class="status-chip">{_escape(value=status.title())}</span>' if status else ""
+    return f"""<article class="publication-card tool-card" data-tooltype="{_escape(value=tooltype)}" data-status="{_escape(value=status)}" data-search="{_escape(value=searchable)}">
+  <div class="card-year tool-meta"><span>{_escape(value=tooltype.title() or 'Tool')}</span><small>{_escape(value=status.title() or 'Status not specified')}</small></div>
+  <div class="card-content">
+    <div class="card-heading"><h3><a href="publications/{_escape(value=entry['filename'])}">{_escape(value=entry['title'])}</a></h3>{status_chip}</div>
+    <p class="tool-summary">{_escape(value=subtitle)}</p>{maintainer_line}{keyword_line}
+  </div>
+  <a class="card-arrow" href="publications/{_escape(value=entry['filename'])}" aria-label="View {_escape(value=entry['title'])}">{_icon(name='arrow')}</a>
 </article>"""
 
 
@@ -438,52 +499,95 @@ def _render_inf_overview(*, project_data: dict[str, object]) -> str:
 
 def render_index(
     *,
-    publications: list[dict[str, object]],
+    entries: list[dict[str, object]],
     project_name: str,
     project_subtitle: str,
     asset_version: str,
     project_data: dict[str, object],
 ) -> str:
-    years = sorted({str(publication["year"]) for publication in publications}, reverse=True)
-    types = sorted({(str(publication["entry_type"]), str(publication["type_label"])) for publication in publications}, key=lambda item: item[1])
+    tools = [entry for entry in entries if entry["entry_type"] == "tool"]
+    catalogue_entries = [entry for entry in entries if entry["entry_type"] != "tool"]
+    years = sorted({str(entry["year"]) for entry in catalogue_entries}, reverse=True)
+    types = sorted(
+        {(str(entry["entry_type"]), str(entry["type_label"])) for entry in catalogue_entries},
+        key=lambda item: item[1],
+    )
     year_options = "".join(f'<option value="{_escape(value=year)}">{_escape(value=year)}</option>' for year in years)
     type_options = "".join(f'<option value="{_escape(value=key)}">{_escape(value=label)}</option>' for key, label in types)
-    cards = "\n".join(_render_index_card(publication=publication) for publication in publications)
-    author_count = len({author for publication in publications for author in publication["authors"] if isinstance(author, str)})
-    publication_count = sum(publication["entry_type"] != "project" for publication in publications)
+    tooltype_options = "".join(
+        f'<option value="{value}">{label}</option>'
+        for value, label in (
+            ("software", "Software"),
+            ("service", "Service"),
+            ("infrastructure", "Infrastructure"),
+            ("workflow", "Workflow"),
+        )
+    )
+    tool_status_options = "".join(
+        f'<option value="{value}">{label}</option>'
+        for value, label in (
+            ("active", "Active"),
+            ("beta", "Beta"),
+            ("maintenance", "Maintenance"),
+            ("retired", "Retired"),
+        )
+    )
+    tool_cards = "\n".join(_render_tool_card(entry=entry) for entry in tools)
+    catalogue_cards = "\n".join(_render_catalogue_card(entry=entry) for entry in catalogue_entries)
+    contributors = {
+        person
+        for entry in entries
+        for field in ("authors", "maintainers")
+        for person in entry[field]
+        if isinstance(person, str)
+    }
+    tool_count = sum(entry["entry_type"] == "tool" for entry in entries)
+    project_count = sum(entry["entry_type"] == "project" for entry in entries)
+    publication_count = sum(entry["entry_type"] not in {"project", "tool"} for entry in entries)
     body = f"""
 <section class="hero">
   <div class="hero-copy">
     <div class="eyebrow">CRC 1629 · Negation in Language and Beyond</div>
     <h1>{_escape(value=project_subtitle)}</h1>
-    <p>Projects and research outputs from the INF subproject, building sustainable data, tools, and methods for collaborative research on negation.</p>
-    <a class="button button-primary" href="#projects">Browse projects {_icon(name='arrow')}</a>
+    <p>Tools, services, projects, and research outputs from the INF subproject, building sustainable infrastructure and methods for collaborative research on negation.</p>
+    <a class="button button-primary" href="#tools">Browse tools &amp; services {_icon(name='arrow')}</a>
   </div>
   <div class="hero-logo"><img src="assets/inf_logo.svg" alt="INF — Information Infrastructure"></div>
 </section>
-<section class="stats" aria-label="Project statistics">
-  <div><strong>{len(publications)}</strong><span>Projects</span></div>
+<section class="stats" aria-label="Catalogue statistics">
+  <div><strong>{tool_count}</strong><span>Tools</span></div>
+  <div><strong>{project_count}</strong><span>Projects</span></div>
   <div><strong>{publication_count}</strong><span>Publications</span></div>
-  <div><strong>{author_count}</strong><span>Contributors</span></div>
-  <div><strong>{len(years)}</strong><span>Years represented</span></div>
+  <div><strong>{len(contributors)}</strong><span>Contributors</span></div>
 </section>
 {_render_inf_overview(project_data=project_data)}
-<section class="publication-section" id="projects">
-  <div class="section-heading"><div><span class="eyebrow">INF catalogue</span><h2>Projects</h2></div><p>Explore the INF subproject’s software, repositories, data resources, articles, conference papers, and technical reports.</p></div>
-  <div class="filters" role="search">
-    <label class="search-field">{_icon(name='search')}<span class="sr-only">Search projects</span><input id="publication-search" type="search" placeholder="Search project, author, venue, or keyword…" autocomplete="off"></label>
-    <label><span class="sr-only">Filter by year</span><select id="year-filter"><option value="">All years</option>{year_options}</select></label>
-    <label><span class="sr-only">Filter by project type</span><select id="type-filter"><option value="">All types</option>{type_options}</select></label>
+<section class="publication-section tool-section" id="tools">
+  <div class="section-heading"><div><span class="eyebrow">Reusable INF resources</span><h2>Tools &amp; Services</h2></div><p>Discover software, hosted services, infrastructure, and workflows maintained or provided by INF.</p></div>
+  <div class="filters tool-filters" role="search" aria-label="Filter tools and services">
+    <label class="search-field">{_icon(name='search')}<span class="sr-only">Search tools</span><input id="tool-search" type="search" placeholder="Search tools…" autocomplete="off"></label>
+    <label><span class="sr-only">Filter by tool type</span><select id="tool-type-filter"><option value="">All tool types</option>{tooltype_options}</select></label>
+    <label><span class="sr-only">Filter by tool status</span><select id="tool-status-filter"><option value="">All statuses</option>{tool_status_options}</select></label>
   </div>
-  <div class="result-bar"><span id="result-count">{len(publications)} projects</span><button id="clear-filters" type="button" hidden>Clear filters</button></div>
-  <div class="publication-list" id="publication-list">{cards}</div>
-  <div class="empty-state" id="empty-state" hidden><span>{_icon(name='search')}</span><h3>No projects found</h3><p>Try another search or clear the filters.</p></div>
+  <div class="result-bar"><span id="tool-result-count">{tool_count} tools</span><button id="tool-clear-filters" type="button" hidden>Clear filters</button></div>
+  <div class="publication-list tool-list" id="tool-list">{tool_cards}</div>
+  <div class="empty-state" id="tool-empty-state" hidden><span>{_icon(name='search')}</span><h3>No tools found</h3><p>Try another search or clear the filters.</p></div>
+</section>
+<section class="publication-section" id="projects">
+  <div class="section-heading"><div><span class="eyebrow">INF research catalogue</span><h2>Projects &amp; Publications</h2></div><p>Explore INF collaborations, research and development activities, articles, conference papers, and technical reports.</p></div>
+  <div class="filters" role="search" aria-label="Filter projects and publications">
+    <label class="search-field">{_icon(name='search')}<span class="sr-only">Search projects and publications</span><input id="catalogue-search" type="search" placeholder="Search project, publication, author, venue, or keyword…" autocomplete="off"></label>
+    <label><span class="sr-only">Filter by year</span><select id="catalogue-year-filter"><option value="">All years</option>{year_options}</select></label>
+    <label><span class="sr-only">Filter by entry type</span><select id="catalogue-type-filter"><option value="">All types</option>{type_options}</select></label>
+  </div>
+  <div class="result-bar"><span id="catalogue-result-count">{len(catalogue_entries)} entries</span><button id="catalogue-clear-filters" type="button" hidden>Clear filters</button></div>
+  <div class="publication-list" id="catalogue-list">{catalogue_cards}</div>
+  <div class="empty-state" id="catalogue-empty-state" hidden><span>{_icon(name='search')}</span><h3>No projects or publications found</h3><p>Try another search or clear the filters.</p></div>
 </section>
 <script src="assets/site.js?v={_escape(value=asset_version)}" defer></script>
 """
     return _page_shell(
-        title=f"{project_name} · Projects",
-        description="Projects, publications, and research outputs of the NegLab CRC 1629 INF subproject.",
+        title=f"{project_name} · Catalogue",
+        description="Tools, services, projects, publications, and research outputs of the NegLab CRC 1629 INF subproject.",
         body=body,
         asset_prefix="",
         asset_version=asset_version,
@@ -497,80 +601,132 @@ def render_repository_link(*, url: str) -> str:
     return f'<span class="button button-secondary button-disabled" aria-disabled="true" title="No code or archive link has been added yet">{_icon(name="github")} Code &amp; archive</span>'
 
 
-def _detail_rows(*, publication: dict[str, object]) -> str:
-    values = [
-        ("Entry type", publication["type_label"]),
-        ("Year", publication["year"]),
-        ("Venue", publication["venue"]),
-        ("Volume", publication["volume"]),
-        ("Issue / number", publication["number"]),
-        ("Pages", publication["pages"]),
-        ("Publisher", publication["publisher"]),
-        ("Location", publication["address"]),
-        ("DOI", publication["doi"]),
-        ("BibTeX key", publication["bib_key"]),
-    ]
+def _detail_rows(*, entry: dict[str, object]) -> str:
+    if entry["entry_type"] == "tool":
+        maintainers = entry["maintainers"] if isinstance(entry["maintainers"], list) else []
+        related = entry["related"] if isinstance(entry["related"], list) else []
+        values = [
+            ("Tool type", str(entry["tooltype"]).title()),
+            ("Status", str(entry["status"]).title()),
+            ("Maintainer", ", ".join(str(maintainer) for maintainer in maintainers)),
+            ("Access", entry["access"]),
+            ("Year", entry["year"]),
+            ("Institution", entry["institution"]),
+            ("License", entry["license"]),
+            ("Related entries", ", ".join(str(bib_key) for bib_key in related)),
+            ("BibTeX key", entry["bib_key"]),
+        ]
+    else:
+        values = [
+            ("Entry type", entry["type_label"]),
+            ("Year", entry["year"]),
+            ("Venue", entry["venue"]),
+            ("Volume", entry["volume"]),
+            ("Issue / number", entry["number"]),
+            ("Pages", entry["pages"]),
+            ("Publisher", entry["publisher"]),
+            ("Location", entry["address"]),
+            ("DOI", entry["doi"]),
+            ("BibTeX key", entry["bib_key"]),
+        ]
     return "".join(
         f'<div><dt>{_escape(value=label)}</dt><dd>{_escape(value=value)}</dd></div>' for label, value in values if value
     )
 
 
-def render_detail(*, publication: dict[str, object], project_name: str, asset_version: str) -> str:
-    authors = publication["authors"] if isinstance(publication["authors"], list) else []
-    keywords = publication["keywords"] if isinstance(publication["keywords"], list) else []
-    title = str(publication["title"])
-    subtitle = f'<p class="subtitle">{_escape(value=publication["subtitle"])}</p>' if publication["subtitle"] else ""
-    venue = f'<p class="detail-venue">{_escape(value=publication["venue"])} · {_escape(value=publication["year"])}</p>' if publication["venue"] else f'<p class="detail-venue">{_escape(value=publication["year"])}</p>'
-    note = f'<span class="status-chip">{_escape(value=publication["note"])}</span>' if publication["note"] else ""
-    is_project = publication["entry_type"] == "project"
+def render_detail(*, entry: dict[str, object], project_name: str, asset_version: str) -> str:
+    authors = entry["authors"] if isinstance(entry["authors"], list) else []
+    maintainers = entry["maintainers"] if isinstance(entry["maintainers"], list) else []
+    keywords = entry["keywords"] if isinstance(entry["keywords"], list) else []
+    title = str(entry["title"])
+    subtitle = f'<p class="subtitle">{_escape(value=entry["subtitle"])}</p>' if entry["subtitle"] else ""
+    entry_type = entry["entry_type"]
+    is_project = entry_type == "project"
+    is_tool = entry_type == "tool"
+    is_publication = not is_project and not is_tool
+    if is_tool:
+        venue = f'<p class="detail-venue">{_escape(value=str(entry["tooltype"]).title())}</p>' if entry["tooltype"] else ""
+    else:
+        venue = f'<p class="detail-venue">{_escape(value=entry["venue"])} · {_escape(value=entry["year"])}</p>' if entry["venue"] else f'<p class="detail-venue">{_escape(value=entry["year"])}</p>'
+    lifecycle = entry["status"] if is_tool else entry["note"]
+    note = f'<span class="status-chip">{_escape(value=str(lifecycle).title())}</span>' if lifecycle else ""
     author_line = f'<p class="detail-authors">{_format_author_list(authors=authors)}</p>' if authors else ""
+    if is_tool:
+        author_line = (
+            f'<p class="detail-authors"><strong>Maintained by</strong> {_format_author_list(authors=maintainers)}</p>'
+            if maintainers
+            else ""
+        )
+        if authors:
+            author_line += f'<p class="tool-authors"><strong>Developed by</strong> {_format_author_list(authors=authors)}</p>'
     actions: list[str] = []
-    if publication["url"]:
-        action_label = "Visit project" if is_project else "View publication"
-        actions.append(f'<a class="button button-primary" href="{_escape(value=publication["url"])}" rel="noopener noreferrer">{_icon(name="external")} {action_label}</a>')
-    if publication["pdf"]:
-        actions.append(f'<a class="button button-secondary" href="{_escape(value=publication["pdf"])}" rel="noopener noreferrer">{_icon(name="file")} PDF</a>')
-    actions.append(render_repository_link(url=str(publication["projectlink"])))
-    abstract = str(publication["abstract"])
-    abstract_section = f'<section class="paper-section"><h2>Abstract</h2><p class="abstract">{_escape(value=abstract)}</p></section>' if abstract else '<section class="paper-section muted-section"><h2>Abstract</h2><p>No abstract is available in the bibliography.</p></section>'
+    if entry["url"]:
+        if is_tool:
+            action_label = "Open tool"
+        elif is_project:
+            action_label = "Visit project"
+        elif is_publication:
+            action_label = "View publication"
+        actions.append(f'<a class="button button-primary" href="{_escape(value=entry["url"])}" rel="noopener noreferrer">{_icon(name="external")} {action_label}</a>')
+    if is_tool and entry["documentation"]:
+        actions.append(f'<a class="button button-secondary" href="{_escape(value=entry["documentation"])}" rel="noopener noreferrer">{_icon(name="book")} Documentation</a>')
+    if entry["pdf"]:
+        actions.append(f'<a class="button button-secondary" href="{_escape(value=entry["pdf"])}" rel="noopener noreferrer">{_icon(name="file")} PDF</a>')
+    actions.append(render_repository_link(url=str(entry["projectlink"])))
+    abstract = str(entry["abstract"])
+    about_heading = "About this tool" if is_tool else "Abstract"
+    missing_about = "No description is available in the bibliography." if is_tool else "No abstract is available in the bibliography."
+    abstract_section = f'<section class="paper-section"><h2>{about_heading}</h2><p class="abstract">{_escape(value=abstract)}</p></section>' if abstract else f'<section class="paper-section muted-section"><h2>{about_heading}</h2><p>{missing_about}</p></section>'
     keyword_html = "".join(f'<span>{_escape(value=keyword)}</span>' for keyword in keywords)
     keyword_section = f'<section class="paper-section"><h2>Keywords</h2><div class="keyword-list">{keyword_html}</div></section>' if keywords else ""
+    back_target = "tools" if is_tool else "projects"
+    back_label = "Tools &amp; Services" if is_tool else "Projects &amp; Publications"
+    if is_tool:
+        facts_heading = "Tool details"
+        entry_kind = "Tool"
+    elif is_project:
+        facts_heading = "Project details"
+        entry_kind = "Project"
+    elif is_publication:
+        facts_heading = "Publication details"
+        entry_kind = "Publication"
+    type_icon = "code" if is_tool else "book"
     body = f"""
-<div class="detail-back"><a href="../index.html#projects">← Back to all projects</a></div>
+<div class="detail-back"><a href="../index.html#{back_target}">← Back to {back_label}</a></div>
 <article class="paper">
   <header class="paper-header">
-    <div class="paper-type">{_icon(name='book')} {_escape(value=publication['type_label'])}{note}</div>
+    <div class="paper-type">{_icon(name=type_icon)} {_escape(value=entry['type_label'])}{note}</div>
     <h1>{_escape(value=title)}</h1>{subtitle}
     {author_line}{venue}
     <div class="paper-actions">{''.join(actions)}</div>
   </header>
   <div class="paper-layout">
     <div>{abstract_section}{keyword_section}
-      <section class="paper-section citation-section"><div class="section-title-row"><h2>BibTeX</h2><button class="copy-button" type="button" data-copy-bib>{_icon(name='copy')} Copy</button></div><pre><code id="bibtex-entry">{_escape(value=publication['raw_bibtex'])}</code></pre></section>
+      <section class="paper-section citation-section"><div class="section-title-row"><h2>BibTeX</h2><button class="copy-button" type="button" data-copy-bib>{_icon(name='copy')} Copy</button></div><pre><code id="bibtex-entry">{_escape(value=entry['raw_bibtex'])}</code></pre></section>
     </div>
-    <aside class="paper-facts"><h2>{'Project details' if is_project else 'Publication details'}</h2><dl>{_detail_rows(publication=publication)}</dl></aside>
+    <aside class="paper-facts"><h2>{facts_heading}</h2><dl>{_detail_rows(entry=entry)}</dl></aside>
   </div>
 </article>
 <script src="../assets/site.js?v={_escape(value=asset_version)}" defer></script>
 """
     page = _page_shell(
         title=f"{title} · {project_name}",
-        description=abstract[:155] if abstract else f"{'Project' if is_project else 'Publication'} details for {title}.",
+        description=abstract[:155] if abstract else f"{entry_kind} details for {title}.",
         body=body,
         asset_prefix="../",
         asset_version=asset_version,
         project_name=project_name,
     )
-    return page.replace("<meta name=\"theme-color\"", f'<meta name="bib-key" content="{_escape(value=publication["bib_key"])}">\n  <meta name="theme-color"', 1)
+    return page.replace("<meta name=\"theme-color\"", f'<meta name="bib-key" content="{_escape(value=entry["bib_key"])}">\n  <meta name="theme-color"', 1)
 
 
-def _sort_publications(*, publications: Iterable[dict[str, object]]) -> list[dict[str, object]]:
-    def sort_key(publication: dict[str, object]) -> tuple[int, str, str]:
-        year = str(publication["year"])
+def _sort_entries(*, entries: Iterable[dict[str, object]]) -> list[dict[str, object]]:
+    def sort_key(entry: dict[str, object]) -> tuple[int, str, str]:
+        year = str(entry["year"])
         numeric_year = int(year) if year.isdigit() else -1
-        return (-numeric_year, str(publication["title"]).casefold(), str(publication["bib_key"]).casefold())
+        return (-numeric_year, str(entry["title"]).casefold(), str(entry["bib_key"]).casefold())
 
-    return sorted(publications, key=sort_key)
+    return sorted(entries, key=sort_key)
 
 
 def _write_assets(*, docs_dir: Path, logo_path: Path, source_root: Path) -> None:
@@ -608,9 +764,9 @@ def generate_site_from_entries(
     source_root: Path,
 ) -> dict[str, int]:
     """Rebuild the complete site from parsed BibTeX entries and homepage data."""
-    publications = _sort_publications(
-        publications=(
-            _entry_to_publication(entry=entry)
+    catalogue_entries = _sort_entries(
+        entries=(
+            _entry_to_catalogue_entry(entry=entry)
             for entry in entries
             if str(entry["entry_type"]) in allowed_entry_types
         )
@@ -625,10 +781,10 @@ def generate_site_from_entries(
     asset_version = _asset_version(source_root=source_root)
     project_data = load_inf_project_data(path=project_data_path)
     _write_assets(docs_dir=docs_dir, logo_path=logo_path, source_root=source_root)
-    for publication in publications:
-        target = publication_dir / str(publication["filename"])
+    for entry in catalogue_entries:
+        target = publication_dir / str(entry["filename"])
         rendered_page = render_detail(
-            publication=publication,
+            entry=entry,
             project_name=project_name,
             asset_version=asset_version,
         )
@@ -636,7 +792,7 @@ def generate_site_from_entries(
 
     (docs_dir / "index.html").write_text(
         render_index(
-            publications=publications,
+            entries=catalogue_entries,
             project_name=project_name,
             project_subtitle=project_subtitle,
             asset_version=asset_version,
@@ -647,22 +803,24 @@ def generate_site_from_entries(
     manifest = {
         "publications": [
             {
-                "bib_key": publication["bib_key"],
-                "filename": publication["filename"],
-                "title": publication["title"],
-                "year": publication["year"],
-                "entry_type": publication["entry_type"],
+                "bib_key": entry["bib_key"],
+                "filename": entry["filename"],
+                "title": entry["title"],
+                "year": entry["year"],
+                "entry_type": entry["entry_type"],
             }
-            for publication in publications
+            for entry in catalogue_entries
         ]
     }
     (publication_dir / "index.json").write_text(json.dumps(manifest, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     (docs_dir / ".nojekyll").touch()
     return {
-        "generated": len(publications),
-        "total": len(publications),
-        "publications": sum(publication["entry_type"] != "project" for publication in publications),
-        "ignored": len(entries) - len(publications),
+        "generated": len(catalogue_entries),
+        "total": len(catalogue_entries),
+        "tools": sum(entry["entry_type"] == "tool" for entry in catalogue_entries),
+        "projects": sum(entry["entry_type"] == "project" for entry in catalogue_entries),
+        "publications": sum(entry["entry_type"] not in {"project", "tool"} for entry in catalogue_entries),
+        "ignored": len(entries) - len(catalogue_entries),
     }
 
 
@@ -708,6 +866,7 @@ def supported_entry_types(*, include_projects: bool = True) -> frozenset[str]:
     }
     if include_projects:
         entry_types.add("project")
+        entry_types.add("tool")
     return frozenset(entry_types)
 
 
@@ -749,8 +908,9 @@ def main(*, argv: Sequence[str] | None = None) -> int:
         source_root=Path(__file__).resolve().parent,
     )
     print(
-        f"Rebuilt site from {arguments.bib_file}: {result['total']} projects and outputs "
-        f"({result['publications']} publications), {result['generated']} detail pages written, "
+        f"Rebuilt site from {arguments.bib_file}: {result['total']} catalogue entries "
+        f"({result['tools']} tools, {result['projects']} projects, {result['publications']} publications), "
+        f"{result['generated']} detail pages written, "
         f"{result['ignored']} unsupported entries ignored."
     )
     return 0

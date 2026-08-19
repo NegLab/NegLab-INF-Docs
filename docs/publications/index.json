@@ -36,6 +36,13 @@
       "entry_type": "inproceedings"
     },
     {
+      "bib_key": "INF:RT-SEG",
+      "filename": "inf-rt-seg-a0d391ab6a.html",
+      "title": "RT-SEG",
+      "year": "2026",
+      "entry_type": "tool"
+    },
+    {
       "bib_key": "Hammerla:etal:2026:c",
       "filename": "hammerla-etal-2026-c-e1418412ed.html",
       "title": "RT-Seg: A Toolkit for Reasoning Trace Segmentation",
@@ -47,7 +54,7 @@
       "filename": "inf-slurm-2026-362dfc2d9d.html",
       "title": "Slurm HPC Infrastructure",
       "year": "2026",
-      "entry_type": "project"
+      "entry_type": "tool"
     },
     {
       "bib_key": "Hammerla:et:al:2025b",
@@ -68,7 +75,14 @@
       "filename": "inf-digitaldatamanagementprotocol-c4e3629750.html",
       "title": "Digital Data Management Protocol",
       "year": "2025",
-      "entry_type": "project"
+      "entry_type": "tool"
+    },
+    {
+      "bib_key": "INF:DUUI",
+      "filename": "inf-duui-aaae3ec39b.html",
+      "title": "Docker Unified UIMA Interface",
+      "year": "2025",
+      "entry_type": "tool"
     },
     {
       "bib_key": "Abrami:et:al:2025:a",
@@ -89,7 +103,7 @@
       "filename": "inf-labelstudio-2025-bd06e8a97c.html",
       "title": "Label Studio Annotation Platform",
       "year": "2025",
-      "entry_type": "project"
+      "entry_type": "tool"
     },
     {
       "bib_key": "INF:ItalDia:2025",
@@ -103,7 +117,7 @@
       "filename": "inf-motr-2025-d77eb6e928.html",
       "title": "Mouse Tracking for Reading",
       "year": "2025",
-      "entry_type": "project"
+      "entry_type": "tool"
     },
     {
       "bib_key": "Bundan:Abrami:Mehler:2025",
@@ -124,7 +138,7 @@
       "filename": "inf-openwebui-2025-2fdbda8ca7.html",
       "title": "OpenWebUI and Local LLM Hosting",
       "year": "2025",
-      "entry_type": "project"
+      "entry_type": "tool"
     },
     {
       "bib_key": "INF:ScopeAnnotation:2025",
@@ -145,14 +159,14 @@
       "filename": "inf-surprisal-2025-b5dd19c811.html",
       "title": "Surprisal Program",
       "year": "2025",
-      "entry_type": "project"
+      "entry_type": "tool"
     },
     {
       "bib_key": "INF:SurrealDB:2025",
       "filename": "inf-surrealdb-2025-a75f389c0d.html",
       "title": "SurrealDB Data-Sharing Infrastructure",
       "year": "2025",
-      "entry_type": "project"
+      "entry_type": "tool"
     },
     {
       "bib_key": "INF:UCEvis:2025",
