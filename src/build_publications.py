@@ -1,5 +1,10 @@
 #!/usr/bin/env python3
-"""Build the NegLab INF GitHub Pages project catalogue from BibTeX files."""
+"""Build the NegLab INF GitHub Pages catalogue from one BibTeX file.
+
+Every catalogue entry is a ``@project`` entry. Its ``keywords`` field lists the
+catalogue categories (tool, project, publication, collaboration) that decide
+on which tab pages the entry appears.
+"""
 
 from __future__ import annotations
 
@@ -10,10 +15,121 @@ import json
 import re
 import shutil
 import unicodedata
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Iterable, Sequence
 from urllib.parse import urlparse
 
+ENTRY_TYPE = "project"
+
+CATEGORY_ORDER = ("tool", "project", "publication", "collaboration")
+CATEGORY_ALIASES = {category: category for category in CATEGORY_ORDER} | {f"{category}s": category for category in CATEGORY_ORDER}
+CATEGORY_LABELS = {"tool": "Tool", "project": "Project", "publication": "Publication", "collaboration": "Collaboration"}
+
+PUBLICATION_TYPE_LABELS = {
+    "article": "Journal article",
+    "book": "Book",
+    "booklet": "Booklet",
+    "inbook": "Book chapter",
+    "incollection": "Book chapter",
+    "inproceedings": "Conference paper",
+    "manual": "Manual",
+    "mastersthesis": "Master's thesis",
+    "misc": "Publication",
+    "phdthesis": "Doctoral thesis",
+    "proceedings": "Proceedings",
+    "techreport": "Technical report",
+    "unpublished": "Preprint",
+}
+
+# Catalogue-only fields that are dropped when a publication is exported as standard BibTeX.
+CATALOGUE_ONLY_FIELDS = frozenset(
+    {"keywords", "tags", "pubtype", "collaboration", "name", "maintainer", "tooltype", "status", "access", "documentation", "projectlink", "related", "license"}
+)
+
+
+@dataclass(frozen=True)
+class Page:
+    slug: str
+    filename: str
+    label: str
+    icon: str
+    eyebrow: str
+    summary: str
+    category: str | None = None
+    stat_label: str = ""
+    singular: str = ""
+    plural: str = ""
+
+
+PAGES = (
+    Page(
+        slug="about",
+        filename="about.html",
+        label="About",
+        icon="info",
+        eyebrow="About the subproject",
+        summary="Learn how INF supports sustainable data, infrastructure, and collaborative research across the CRC.",
+    ),
+    Page(
+        slug="people",
+        filename="people.html",
+        label="People",
+        icon="users",
+        eyebrow="The INF team",
+        summary="Meet the project leadership and scientific staff behind INF’s services and research support.",
+    ),
+    Page(
+        slug="tools",
+        filename="tools.html",
+        label="Tools & Services",
+        icon="code",
+        eyebrow="Reusable INF resources",
+        summary="Browse reusable software, hosted services, infrastructure resources, and workflows provided by INF.",
+        category="tool",
+        stat_label="Tools",
+        singular="tool",
+        plural="tools",
+    ),
+    Page(
+        slug="projects",
+        filename="projects.html",
+        label="Projects",
+        icon="folder",
+        eyebrow="INF activities",
+        summary="Explore research, development, annotation, and infrastructure activities carried out by INF.",
+        category="project",
+        stat_label="Projects",
+        singular="project",
+        plural="projects",
+    ),
+    Page(
+        slug="publications",
+        filename="publications.html",
+        label="Publications",
+        icon="book",
+        eyebrow="Research outputs",
+        summary="Read journal articles, conference papers, and technical reports by INF members and partners.",
+        category="publication",
+        stat_label="Publications",
+        singular="publication",
+        plural="publications",
+    ),
+    Page(
+        slug="collaborations",
+        filename="collaborations.html",
+        label="Collaborations",
+        icon="link",
+        eyebrow="Joint work across the CRC",
+        summary="See the projects, tools, and publications INF has realised together with other CRC 1629 projects.",
+        category="collaboration",
+        stat_label="Collaborations",
+        singular="collaboration",
+        plural="collaborations",
+    ),
+)
+PAGES_BY_SLUG = {page.slug: page for page in PAGES}
+CATEGORY_PAGES = {page.category: page for page in PAGES if page.category}
 
 def _read_balanced(*, text: str, start: int, opening: str, closing: str) -> tuple[str, int]:
     depth = 0
@@ -193,62 +309,97 @@ def _valid_web_url(*, url: str) -> bool:
     return parsed.scheme in {"http", "https"} and bool(parsed.netloc)
 
 
+def _split_list(*, value: str) -> list[str]:
+    return [_latex_to_text(value=item.strip()) for item in re.split(r"[,;]", value) if item.strip()]
+
+
+def _partner_projects(*, value: str) -> list[str]:
+    """Return the CRC projects listed in ``collaboration``; codes like ``a02`` become ``A02``."""
+    partners: list[str] = []
+    for item in _split_list(value=value):
+        partner = item.upper() if re.fullmatch(r"[A-Za-z]\d{2}", item) else item
+        if partner not in partners:
+            partners.append(partner)
+    return partners
+
+
+def parse_categories(*, bib_key: str, value: str) -> list[str]:
+    """Return the catalogue categories listed in an entry's ``keywords`` field."""
+    categories: list[str] = []
+    for item in _split_list(value=value):
+        category = CATEGORY_ALIASES.get(item.casefold())
+        if category is None:
+            allowed = ", ".join(CATEGORY_ORDER)
+            raise ValueError(f"Entry {bib_key!r} has unknown category {item!r} in keywords; use {allowed}")
+        if category not in categories:
+            categories.append(category)
+    if not categories:
+        raise ValueError(
+            f"Entry {bib_key!r} has no categories; add keywords = {{tool, project, publication, or collaboration}}"
+        )
+    return categories
+
+
+def citation_bibtex(*, bib_key: str, pubtype: str, fields: dict[str, str]) -> str:
+    """Convert a catalogue entry into standard BibTeX for citing a publication."""
+    items: list[tuple[str, str]] = []
+    if "title" not in fields and fields.get("name"):
+        items.append(("title", fields["name"]))
+    items.extend((name, value) for name, value in fields.items() if name not in CATALOGUE_ONLY_FIELDS)
+    if fields.get("tags"):
+        items.append(("keywords", fields["tags"]))
+    items = [(name, " ".join(value.split())) for name, value in items if value.strip()]
+    width = max((len(name) for name, _ in items), default=0)
+    body = ",\n".join(f"  {name.ljust(width)} = {{{value}}}" for name, value in items)
+    return f"@{pubtype}{{{bib_key},\n{body}\n}}"
+
+
 def _entry_to_catalogue_entry(*, entry: dict[str, object]) -> dict[str, object]:
     fields = entry["fields"]
     if not isinstance(fields, dict):
         raise TypeError("BibTeX fields must be a dictionary")
     text_fields = {str(key): str(value) for key, value in fields.items()}
+    bib_key = str(entry["bib_key"])
     entry_type = str(entry["entry_type"])
+    if entry_type != ENTRY_TYPE:
+        raise ValueError(
+            f"Entry {bib_key!r} uses @{entry_type}; every catalogue entry must be @{ENTRY_TYPE} "
+            "with its categories listed in keywords"
+        )
+    categories = parse_categories(bib_key=bib_key, value=text_fields.get("keywords", ""))
+    is_publication = "publication" in categories
+    pubtype = text_fields.get("pubtype", "").strip().casefold()
+    if is_publication and not pubtype:
+        pubtype = "misc"
+    pubtype_label = PUBLICATION_TYPE_LABELS.get(pubtype, pubtype.replace("_", " ").title()) if pubtype else ""
+    primary = categories[0]
+    type_label = pubtype_label if primary == "publication" else CATEGORY_LABELS[primary]
+
     title = _latex_to_text(value=text_fields.get("title", text_fields.get("name", "Untitled entry")))
-    subtitle = _latex_to_text(value=text_fields.get("subtitle", ""))
     venue = _latex_to_text(
         value=text_fields.get("journal", text_fields.get("booktitle", text_fields.get("institution", "")))
     )
     doi = _normalise_doi(doi=text_fields.get("doi", ""))
-    url = text_fields.get("url", "").strip()
-    if not _valid_web_url(url=url):
-        url = f"https://doi.org/{doi}" if doi else ""
-    pdf = text_fields.get("pdf", "").strip()
-    if not _valid_web_url(url=pdf):
-        pdf = ""
-    projectlink = text_fields.get("projectlink", "").strip()
-    if not _valid_web_url(url=projectlink):
-        projectlink = ""
-    documentation = text_fields.get("documentation", "").strip()
-    if not _valid_web_url(url=documentation):
-        documentation = ""
-    keywords = [
-        _latex_to_text(value=item.strip())
-        for item in re.split(r"[,;]", text_fields.get("keywords", ""))
-        if item.strip()
-    ]
-    type_labels = {
-        "article": "Journal article",
-        "inbook": "Book chapter",
-        "incollection": "Book chapter",
-        "inproceedings": "Conference paper",
-        "mastersthesis": "Master's thesis",
-        "misc": "Publication",
-        "phdthesis": "Doctoral thesis",
-        "proceedings": "Proceedings",
-        "project": "Project",
-        "techreport": "Technical report",
-        "tool": "Tool",
-        "unpublished": "Preprint",
-    }
+    links: dict[str, str] = {}
+    for name in ("url", "pdf", "projectlink", "documentation"):
+        link = text_fields.get(name, "").strip()
+        links[name] = link if _valid_web_url(url=link) else ""
+    if not links["url"] and doi:
+        links["url"] = f"https://doi.org/{doi}"
     note = _latex_to_text(value=text_fields.get("note", text_fields.get("pubstate", "")))
-    status = _latex_to_text(value=text_fields.get("status", ""))
-    if entry_type == "tool" and not status:
-        status = note
+    status = _latex_to_text(value=text_fields.get("status", "")) or note
     return {
-        "bib_key": str(entry["bib_key"]),
-        "entry_type": entry_type,
-        "type_label": type_labels.get(entry_type, entry_type.replace("_", " ").title()),
+        "bib_key": bib_key,
+        "categories": categories,
+        "primary_category": primary,
+        "pubtype": pubtype,
+        "pubtype_label": pubtype_label,
+        "type_label": type_label,
         "title": title,
-        "subtitle": subtitle,
+        "subtitle": _latex_to_text(value=text_fields.get("subtitle", "")),
         "authors": _author_names(value=text_fields.get("author", text_fields.get("editor", ""))),
         "maintainers": _author_names(value=text_fields.get("maintainer", "")),
-        "year": _latex_to_text(value=text_fields.get("year", "Undated")),
+        "year": _latex_to_text(value=text_fields.get("year", "")) or "Undated",
         "venue": venue,
         "institution": _latex_to_text(value=text_fields.get("institution", "")),
         "volume": _latex_to_text(value=text_fields.get("volume", "")),
@@ -256,27 +407,40 @@ def _entry_to_catalogue_entry(*, entry: dict[str, object]) -> dict[str, object]:
         "pages": _latex_to_text(value=text_fields.get("pages", "")),
         "publisher": _latex_to_text(value=text_fields.get("publisher", "")),
         "address": _latex_to_text(value=text_fields.get("address", text_fields.get("location", ""))),
-        "note": note,
         "tooltype": _latex_to_text(value=text_fields.get("tooltype", "")).casefold(),
-        "documentation": documentation,
         "access": _latex_to_text(value=text_fields.get("access", "")),
         "status": status.casefold(),
         "license": _latex_to_text(value=text_fields.get("license", "")),
-        "related": [
-            _latex_to_text(value=item.strip())
-            for item in re.split(r"[,;]", text_fields.get("related", ""))
-            if item.strip()
-        ],
+        "related": _split_list(value=text_fields.get("related", "")),
         "abstract": _latex_to_text(value=text_fields.get("abstract", "")),
-        "keywords": keywords,
+        "tags": _split_list(value=text_fields.get("tags", "")),
+        "partners": _partner_projects(value=text_fields.get("collaboration", "")),
         "doi": doi,
-        "url": url,
-        "pdf": pdf,
-        "projectlink": projectlink,
+        **links,
         "raw_bibtex": str(entry["raw_bibtex"]),
+        "citation_bibtex": citation_bibtex(bib_key=bib_key, pubtype=pubtype, fields=text_fields) if is_publication else "",
         "source": str(entry["source"]),
-        "filename": filename_for_key(bib_key=str(entry["bib_key"])),
+        "filename": filename_for_key(bib_key=bib_key),
     }
+
+
+def _link_related_entries(*, entries: list[dict[str, object]]) -> None:
+    """Validate ``related`` keys and record links in both directions."""
+    by_key = {str(entry["bib_key"]): entry for entry in entries}
+    links: dict[str, list[str]] = {key: [] for key in by_key}
+    for entry in entries:
+        key = str(entry["bib_key"])
+        for related_key in entry["related"]:
+            if related_key not in by_key:
+                raise ValueError(f"Entry {key!r} lists unknown related key {related_key!r}")
+            for source, target in ((key, related_key), (related_key, key)):
+                if target != source and target not in links[source]:
+                    links[source].append(target)
+    for entry in entries:
+        entry["related_entries"] = [
+            {"bib_key": key, "title": by_key[key]["title"], "filename": by_key[key]["filename"], "type_label": by_key[key]["type_label"]}
+            for key in links[str(entry["bib_key"])]
+        ]
 
 
 def _escape(*, value: object) -> str:
@@ -313,7 +477,10 @@ def _icon(*, name: str) -> str:
         "copy": '<rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/>',
         "external": '<path d="M15 3h6v6"/><path d="M10 14 21 3"/><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>',
         "file": '<path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/>',
+        "folder": '<path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"/>',
         "github": '<path d="M15 22v-4a4.8 4.8 0 0 0-1-3.5c3.3-.4 6.8-1.6 6.8-7A5.4 5.4 0 0 0 19.4 4 5 5 0 0 0 19.3.5S18.2.1 15 1.8a13.4 13.4 0 0 0-7 0C4.8.1 3.7.5 3.7.5A5 5 0 0 0 3.6 4a5.4 5.4 0 0 0-1.4 3.7c0 5.4 3.5 6.6 6.8 7A4.8 4.8 0 0 0 8 18v4"/><path d="M8 19c-3 .9-3-1.5-4-2"/>',
+        "info": '<circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/>',
+        "link": '<path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>',
         "search": '<circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/>',
         "users": '<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>',
     }
@@ -328,7 +495,13 @@ def _page_shell(
     asset_prefix: str,
     asset_version: str,
     project_name: str,
+    active: str,
 ) -> str:
+    current = ' aria-current="page"'
+    nav_links = "".join(
+        f'<a href="{asset_prefix}{page.filename}"{current if page.slug == active else ""}>{_escape(value=page.label)}</a>'
+        for page in PAGES
+    )
     return f"""<!doctype html>
 <html lang="en">
 <head>
@@ -346,73 +519,95 @@ def _page_shell(
       <span class="brand-mark">INF</span>
       <span><strong>{_escape(value=project_name)}</strong><small>Information Infrastructure</small></span>
     </a>
-    <nav aria-label="Main navigation"><a href="{asset_prefix}index.html#about">About</a><a href="{asset_prefix}index.html#people">People</a><a href="{asset_prefix}index.html#tools">Tools &amp; Services</a><a href="{asset_prefix}index.html#projects">Projects &amp; Publications</a></nav>
+    <nav aria-label="Main navigation">{nav_links}</nav>
   </header>
   <main id="main-content">{body}</main>
   <footer><div><strong>{_escape(value=project_name)}</strong><p>Tools, projects, publications, and information infrastructure for collaborative negation research.</p></div><p>CRC 1629 · Goethe University Frankfurt</p></footer>
+  <script src="{asset_prefix}assets/site.js?v={_escape(value=asset_version)}" defer></script>
 </body>
 </html>
 """
+
+
+def _page_intro(*, page: Page) -> str:
+    return f"""
+<section class="page-hero">
+  <div class="page-hero-inner"><span class="eyebrow">{_escape(value=page.eyebrow)}</span><h1>{_escape(value=page.label)}</h1><p>{_escape(value=page.summary)}</p></div>
+</section>"""
 
 
 def _format_author_list(*, authors: list[str]) -> str:
     return ", ".join(_escape(value=author) for author in authors) if authors else "Unknown authors"
 
 
-def _render_catalogue_card(*, entry: dict[str, object]) -> str:
-    authors = entry["authors"] if isinstance(entry["authors"], list) else []
-    keywords = entry["keywords"] if isinstance(entry["keywords"], list) else []
+def _card_attributes(*, entry: dict[str, object]) -> str:
     searchable = " ".join(
         [
             str(entry["title"]),
             str(entry["subtitle"]),
             str(entry["abstract"]),
-            *[str(author) for author in authors],
             str(entry["venue"]),
-            *[str(keyword) for keyword in keywords],
+            str(entry["tooltype"]),
+            str(entry["type_label"]),
+            *[str(author) for author in entry["authors"]],
+            *[str(maintainer) for maintainer in entry["maintainers"]],
+            *[str(tag) for tag in entry["tags"]],
+            *[CATEGORY_LABELS[category] for category in entry["categories"]],
+            *[str(partner) for partner in entry["partners"]],
         ]
     ).lower()
+    attributes = {
+        "year": entry["year"],
+        "status": entry["status"],
+        "tooltype": entry["tooltype"],
+        "pubtype": entry["pubtype"],
+        "categories": "|".join(entry["categories"]),
+        "partners": "|".join(entry["partners"]),
+        "search": searchable,
+    }
+    return " ".join(f'data-{name}="{_escape(value=value)}"' for name, value in attributes.items())
+
+
+def _partner_line(*, entry: dict[str, object]) -> str:
+    partners = entry["partners"]
+    if not partners:
+        return ""
+    return f'<p class="partner-line"><strong>In collaboration with</strong> {_escape(value=", ".join(partners))}</p>'
+
+
+def _render_catalogue_card(*, entry: dict[str, object], label: str) -> str:
+    authors = entry["authors"]
     venue = f'<p class="venue">{_escape(value=entry["venue"])}</p>' if entry["venue"] else ""
     author_line = f'<p class="authors">{_format_author_list(authors=authors)}</p>' if authors else ""
-    note = f'<span class="status-chip">{_escape(value=entry["note"])}</span>' if entry["note"] else ""
-    return f"""<article class="publication-card" data-year="{_escape(value=entry['year'])}" data-type="{_escape(value=entry['entry_type'])}" data-search="{_escape(value=searchable)}">
-  <div class="card-year"><span>{_escape(value=entry['year'])}</span><small>{_escape(value=entry['type_label'])}</small></div>
+    status = f'<span class="status-chip">{_escape(value=entry["status"])}</span>' if entry["status"] else ""
+    return f"""<article class="publication-card" {_card_attributes(entry=entry)}>
+  <div class="card-year"><span>{_escape(value=entry['year'])}</span><small>{_escape(value=label)}</small></div>
   <div class="card-content">
-    <div class="card-heading"><h3><a href="publications/{_escape(value=entry['filename'])}">{_escape(value=entry['title'])}</a></h3>{note}</div>{author_line}{venue}
+    <div class="card-heading"><h3><a href="publications/{_escape(value=entry['filename'])}">{_escape(value=entry['title'])}</a></h3>{status}</div>{author_line}{venue}{_partner_line(entry=entry)}
   </div>
   <a class="card-arrow" href="publications/{_escape(value=entry['filename'])}" aria-label="View {_escape(value=entry['title'])}">{_icon(name='arrow')}</a>
 </article>"""
 
 
 def _render_tool_card(*, entry: dict[str, object]) -> str:
-    maintainers = entry["maintainers"] if isinstance(entry["maintainers"], list) else []
-    keywords = entry["keywords"] if isinstance(entry["keywords"], list) else []
-    searchable = " ".join(
-        [
-            str(entry["title"]),
-            str(entry["subtitle"]),
-            str(entry["abstract"]),
-            *[str(maintainer) for maintainer in maintainers],
-            *[str(keyword) for keyword in keywords],
-            str(entry["tooltype"]),
-        ]
-    ).lower()
-    subtitle = str(entry["subtitle"]) or str(entry["abstract"])
+    maintainers = entry["maintainers"]
+    tags = entry["tags"]
+    summary = str(entry["subtitle"]) or str(entry["abstract"])
     maintainer_line = (
         f'<p class="tool-maintainers"><strong>Maintained by</strong> {_format_author_list(authors=maintainers)}</p>'
         if maintainers
         else ""
     )
-    keyword_html = "".join(f'<span>{_escape(value=keyword)}</span>' for keyword in keywords[:4])
-    keyword_line = f'<div class="tool-keywords">{keyword_html}</div>' if keyword_html else ""
+    tag_html = "".join(f'<span>{_escape(value=tag)}</span>' for tag in tags[:4])
+    tag_line = f'<div class="tool-keywords">{tag_html}</div>' if tag_html else ""
     tooltype = str(entry["tooltype"])
     status = str(entry["status"])
     status_chip = f'<span class="status-chip">{_escape(value=status.title())}</span>' if status else ""
-    return f"""<article class="publication-card tool-card" data-tooltype="{_escape(value=tooltype)}" data-status="{_escape(value=status)}" data-search="{_escape(value=searchable)}">
+    return f"""<article class="publication-card tool-card" {_card_attributes(entry=entry)}>
   <div class="card-year tool-meta"><span>{_escape(value=tooltype.title() or 'Tool')}</span><small>{_escape(value=status.title() or 'Status not specified')}</small></div>
   <div class="card-content">
     <div class="card-heading"><h3><a href="publications/{_escape(value=entry['filename'])}">{_escape(value=entry['title'])}</a></h3>{status_chip}</div>
-    <p class="tool-summary">{_escape(value=subtitle)}</p>{maintainer_line}{keyword_line}
+    <p class="tool-summary">{_escape(value=summary)}</p>{maintainer_line}{_partner_line(entry=entry)}{tag_line}
   </div>
   <a class="card-arrow" href="publications/{_escape(value=entry['filename'])}" aria-label="View {_escape(value=entry['title'])}">{_icon(name='arrow')}</a>
 </article>"""
@@ -425,7 +620,12 @@ def _person_initials(*, name: str) -> str:
     return "".join(word[0].upper() for word in selected if word) or "INF"
 
 
-def _render_inf_overview(*, project_data: dict[str, object]) -> str:
+def _people(*, project_data: dict[str, object]) -> list[dict[str, object]]:
+    people = project_data["people"] if isinstance(project_data["people"], list) else []
+    return [person for person in people if isinstance(person, dict)]
+
+
+def render_about_page(*, project_data: dict[str, object], project_name: str, asset_version: str) -> str:
     descriptions = project_data["description"] if isinstance(project_data["description"], list) else []
     description_html = "".join(f'<p>{_escape(value=paragraph)}</p>' for paragraph in descriptions if isinstance(paragraph, str))
 
@@ -455,12 +655,34 @@ def _render_inf_overview(*, project_data: dict[str, object]) -> str:
         if _valid_web_url(url=source_url)
         else ""
     )
+    contact = str(project_data.get("contact", "")).strip()
+    contact_html = f'<p class="contact-note">{_escape(value=contact)}</p>' if contact else ""
+    page = PAGES_BY_SLUG["about"]
+    body = f"""{_page_intro(page=page)}
+<section class="about-section">
+  <div class="section-heading"><div><span class="eyebrow">{_escape(value=project_data['title'])}</span><h2>{_escape(value=project_data['subtitle'])}</h2></div></div>
+  <div class="about-grid">
+    <div class="about-copy">{description_html}<div class="related-links">{link_html}</div>{source_link}</div>
+    <aside class="research-areas"><span class="eyebrow">Research areas</span><div>{area_html}</div></aside>
+  </div>
+  <div class="services-grid">{"".join(service_cards)}</div>{contact_html}
+</section>
+"""
+    return _page_shell(
+        title=f"{page.label} · {project_name}",
+        description=page.summary,
+        body=body,
+        asset_prefix="",
+        asset_version=asset_version,
+        project_name=project_name,
+        active=page.slug,
+    )
 
-    people = project_data["people"] if isinstance(project_data["people"], list) else []
+
+def render_people_page(*, project_data: dict[str, object], project_name: str, asset_version: str) -> str:
     role_groups: dict[str, list[dict[str, object]]] = {}
-    for person in people:
-        if isinstance(person, dict):
-            role_groups.setdefault(str(person["role"]), []).append(person)
+    for person in _people(project_data=project_data):
+        role_groups.setdefault(str(person["role"]), []).append(person)
     people_groups: list[str] = []
     for role, members in role_groups.items():
         cards: list[str] = []
@@ -476,24 +698,22 @@ def _render_inf_overview(*, project_data: dict[str, object]) -> str:
                 f'<article class="person-card"><div class="person-initials" aria-hidden="true">{_escape(value=_person_initials(name=name))}</div>'
                 f'<div><span>{_escape(value=role)}</span><h3>{name_html}</h3>{affiliation_html}</div></article>'
             )
-        people_groups.append(f'<div class="people-group"><h3>{_escape(value=role)}</h3><div class="people-grid">{"".join(cards)}</div></div>')
-
-    contact = str(project_data.get("contact", "")).strip()
-    contact_html = f'<p class="contact-note">{_escape(value=contact)}</p>' if contact else ""
-    return f"""
-<section class="about-section" id="about">
-  <div class="section-heading"><div><span class="eyebrow">About the subproject</span><h2>{_escape(value=project_data['title'])}</h2></div><p>{_escape(value=project_data['subtitle'])}</p></div>
-  <div class="about-grid">
-    <div class="about-copy">{description_html}<div class="related-links">{link_html}</div>{source_link}</div>
-    <aside class="research-areas"><span class="eyebrow">Research areas</span><div>{area_html}</div></aside>
-  </div>
-  <div class="services-grid">{"".join(service_cards)}</div>{contact_html}
-</section>
-<section class="people-section" id="people">
-  <div class="section-heading"><div><span class="eyebrow">The INF team</span><h2>People</h2></div><p>Project leadership and scientific staff supporting research across the CRC.</p></div>
+        people_groups.append(f'<div class="people-group"><h2>{_escape(value=role)}</h2><div class="people-grid">{"".join(cards)}</div></div>')
+    page = PAGES_BY_SLUG["people"]
+    body = f"""{_page_intro(page=page)}
+<section class="people-section">
   {''.join(people_groups)}
 </section>
 """
+    return _page_shell(
+        title=f"{page.label} · {project_name}",
+        description=page.summary,
+        body=body,
+        asset_prefix="",
+        asset_version=asset_version,
+        project_name=project_name,
+        active=page.slug,
+    )
 
 
 def render_index(
@@ -504,40 +724,25 @@ def render_index(
     asset_version: str,
     project_data: dict[str, object],
 ) -> str:
-    tools = [entry for entry in entries if entry["entry_type"] == "tool"]
-    catalogue_entries = [entry for entry in entries if entry["entry_type"] != "tool"]
-    years = sorted({str(entry["year"]) for entry in catalogue_entries}, reverse=True)
-    types = sorted(
-        {(str(entry["entry_type"]), str(entry["type_label"])) for entry in catalogue_entries},
-        key=lambda item: item[1],
-    )
-    year_options = "".join(f'<option value="{_escape(value=year)}">{_escape(value=year)}</option>' for year in years)
-    type_options = "".join(f'<option value="{_escape(value=key)}">{_escape(value=label)}</option>' for key, label in types)
-    tooltype_options = "".join(
-        f'<option value="{value}">{label}</option>'
-        for value, label in (
-            ("software", "Software"),
-            ("service", "Service"),
-            ("infrastructure", "Infrastructure"),
-            ("workflow", "Workflow"),
+    panels: list[str] = []
+    for number, page in enumerate(PAGES, start=1):
+        if page.slug == "about":
+            stat = "<span>Project overview</span>"
+        elif page.slug == "people":
+            stat = f'<span class="panel-stat"><strong>{len(_people(project_data=project_data))}</strong><span>Team members</span></span>'
+        else:
+            count = sum(page.category in entry["categories"] for entry in entries)
+            stat = f'<span class="panel-stat"><strong>{count}</strong><span>{_escape(value=page.stat_label)}</span></span>'
+        panels.append(
+            f"""    <a class="section-panel" href="{page.filename}">
+      <span class="panel-icon">{_icon(name=page.icon)}</span>
+      <span class="panel-number">{number:02d}</span>
+      <h2>{_escape(value=page.label)}</h2>
+      <p>{_escape(value=page.summary)}</p>
+      <span class="panel-footer">{stat}{_icon(name='arrow')}</span>
+    </a>"""
         )
-    )
-    tool_status_options = "".join(
-        f'<option value="{value}">{label}</option>'
-        for value, label in (
-            ("active", "Active"),
-            ("beta", "Beta"),
-            ("maintenance", "Maintenance"),
-            ("retired", "Retired"),
-        )
-    )
-    tool_cards = "\n".join(_render_tool_card(entry=entry) for entry in tools)
-    catalogue_cards = "\n".join(_render_catalogue_card(entry=entry) for entry in catalogue_entries)
-    people = project_data["people"] if isinstance(project_data["people"], list) else []
-    people_count = sum(isinstance(person, dict) for person in people)
-    tool_count = sum(entry["entry_type"] == "tool" for entry in entries)
-    project_count = sum(entry["entry_type"] == "project" for entry in entries)
-    publication_count = sum(entry["entry_type"] not in {"project", "tool"} for entry in entries)
+    panel_html = "\n".join(panels)
     body = f"""
 <section class="hero">
   <div class="hero-copy">
@@ -546,68 +751,104 @@ def render_index(
     <p>Tools, services, projects, and research outputs from the INF subproject, building sustainable infrastructure and methods for collaborative research on negation.</p>
   </div>
   <nav class="section-navigation" aria-label="Explore the INF website">
-    <a class="section-panel" href="#about">
-      <span class="panel-icon">{_icon(name='book')}</span>
-      <span class="panel-number">01</span>
-      <h2>About INF</h2>
-      <p>Learn how INF supports sustainable data, infrastructure, and collaborative research across the CRC.</p>
-      <span class="panel-footer"><span>Project overview</span>{_icon(name='arrow')}</span>
-    </a>
-    <a class="section-panel" href="#people">
-      <span class="panel-icon">{_icon(name='users')}</span>
-      <span class="panel-number">02</span>
-      <h2>People</h2>
-      <p>Meet the project leadership and scientific staff behind INF’s services and research support.</p>
-      <span class="panel-footer"><span class="panel-stat"><strong>{people_count}</strong><span>Team members</span></span>{_icon(name='arrow')}</span>
-    </a>
-    <a class="section-panel" href="#tools">
-      <span class="panel-icon">{_icon(name='code')}</span>
-      <span class="panel-number">03</span>
-      <h2>Tools &amp; Services</h2>
-      <p>Browse reusable software, hosted services, infrastructure resources, and workflows provided by INF.</p>
-      <span class="panel-footer"><span class="panel-stat"><strong>{tool_count}</strong><span>Tools</span></span>{_icon(name='arrow')}</span>
-    </a>
-    <a class="section-panel" href="#projects">
-      <span class="panel-icon">{_icon(name='file')}</span>
-      <span class="panel-number">04</span>
-      <h2>Projects &amp; Publications</h2>
-      <p>Explore INF collaborations, development activities, articles, conference papers, and reports.</p>
-      <span class="panel-footer"><span class="panel-stat"><strong>{project_count}</strong><span>Projects</span><strong>{publication_count}</strong><span>Publications</span></span>{_icon(name='arrow')}</span>
-    </a>
+{panel_html}
   </nav>
 </section>
-{_render_inf_overview(project_data=project_data)}
-<section class="publication-section tool-section" id="tools">
-  <div class="section-heading"><div><span class="eyebrow">Reusable INF resources</span><h2>Tools &amp; Services</h2></div><p>Discover software, hosted services, infrastructure, and workflows maintained or provided by INF.</p></div>
-  <div class="filters tool-filters" role="search" aria-label="Filter tools and services">
-    <label class="search-field">{_icon(name='search')}<span class="sr-only">Search tools</span><input id="tool-search" type="search" placeholder="Search tools…" autocomplete="off"></label>
-    <label><span class="sr-only">Filter by tool type</span><select id="tool-type-filter"><option value="">All tool types</option>{tooltype_options}</select></label>
-    <label><span class="sr-only">Filter by tool status</span><select id="tool-status-filter"><option value="">All statuses</option>{tool_status_options}</select></label>
-  </div>
-  <div class="result-bar"><span id="tool-result-count">{tool_count} tools</span><button id="tool-clear-filters" type="button" hidden>Clear filters</button></div>
-  <div class="publication-list tool-list" id="tool-list">{tool_cards}</div>
-  <div class="empty-state" id="tool-empty-state" hidden><span>{_icon(name='search')}</span><h3>No tools found</h3><p>Try another search or clear the filters.</p></div>
-</section>
-<section class="publication-section" id="projects">
-  <div class="section-heading"><div><span class="eyebrow">INF research catalogue</span><h2>Projects &amp; Publications</h2></div><p>Explore INF collaborations, research and development activities, articles, conference papers, and technical reports.</p></div>
-  <div class="filters" role="search" aria-label="Filter projects and publications">
-    <label class="search-field">{_icon(name='search')}<span class="sr-only">Search projects and publications</span><input id="catalogue-search" type="search" placeholder="Search project, publication, author, venue, or keyword…" autocomplete="off"></label>
-    <label><span class="sr-only">Filter by year</span><select id="catalogue-year-filter"><option value="">All years</option>{year_options}</select></label>
-    <label><span class="sr-only">Filter by entry type</span><select id="catalogue-type-filter"><option value="">All types</option>{type_options}</select></label>
-  </div>
-  <div class="result-bar"><span id="catalogue-result-count">{len(catalogue_entries)} entries</span><button id="catalogue-clear-filters" type="button" hidden>Clear filters</button></div>
-  <div class="publication-list" id="catalogue-list">{catalogue_cards}</div>
-  <div class="empty-state" id="catalogue-empty-state" hidden><span>{_icon(name='search')}</span><h3>No projects or publications found</h3><p>Try another search or clear the filters.</p></div>
-</section>
-<script src="assets/site.js?v={_escape(value=asset_version)}" defer></script>
 """
     return _page_shell(
         title=f"{project_name} · Catalogue",
-        description="Tools, services, projects, publications, and research outputs of the NegLab CRC 1629 INF subproject.",
+        description="Tools, services, projects, publications, and collaborations of the NegLab CRC 1629 INF subproject.",
         body=body,
         asset_prefix="",
         asset_version=asset_version,
         project_name=project_name,
+        active="home",
+    )
+
+
+def _filter_select(*, name: str, label: str, all_label: str, options: Iterable[tuple[str, str]], token: bool = False) -> str:
+    option_html = "".join(f'<option value="{_escape(value=value)}">{_escape(value=text)}</option>' for value, text in options)
+    mode = ' data-filter-mode="token"' if token else ""
+    return f'<label><span class="sr-only">{_escape(value=label)}</span><select data-filter="{name}"{mode}><option value="">{_escape(value=all_label)}</option>{option_html}</select></label>'
+
+
+def _category_filters(*, category: str, entries: list[dict[str, object]]) -> list[str]:
+    def distinct(field: str) -> list[str]:
+        return sorted({str(entry[field]) for entry in entries if entry[field]})
+
+    years = sorted({str(entry["year"]) for entry in entries}, reverse=True)
+    year_filter = _filter_select(name="year", label="Filter by year", all_label="All years", options=((year, year) for year in years))
+    status_filter = _filter_select(
+        name="status", label="Filter by status", all_label="All statuses", options=((value, value.title()) for value in distinct("status"))
+    )
+    if category == "tool":
+        return [
+            _filter_select(
+                name="tooltype", label="Filter by tool type", all_label="All tool types", options=((value, value.title()) for value in distinct("tooltype"))
+            ),
+            status_filter,
+        ]
+    if category == "publication":
+        pubtypes = sorted({(str(entry["pubtype"]), str(entry["pubtype_label"])) for entry in entries}, key=lambda item: item[1])
+        return [year_filter, _filter_select(name="pubtype", label="Filter by publication type", all_label="All publication types", options=pubtypes)]
+    if category == "collaboration":
+        present = [other for other in CATEGORY_ORDER if other != "collaboration" and any(other in entry["categories"] for entry in entries)]
+        partners = sorted({str(partner) for entry in entries for partner in entry["partners"]}, key=str.casefold)
+        return [
+            year_filter,
+            _filter_select(
+                name="partners",
+                label="Filter by partner project",
+                all_label="All partner projects",
+                options=((partner, partner) for partner in partners),
+                token=True,
+            ),
+            _filter_select(
+                name="categories",
+                label="Filter by category",
+                all_label="All categories",
+                options=((other, CATEGORY_PAGES[other].stat_label) for other in present),
+                token=True,
+            ),
+        ]
+    return [year_filter, status_filter]
+
+
+def render_category_page(
+    *,
+    page: Page,
+    entries: list[dict[str, object]],
+    project_name: str,
+    asset_version: str,
+) -> str:
+    category = str(page.category)
+    members = [entry for entry in entries if category in entry["categories"]]
+    if category == "tool":
+        cards = "\n".join(_render_tool_card(entry=entry) for entry in members)
+    elif category == "publication":
+        cards = "\n".join(_render_catalogue_card(entry=entry, label=str(entry["pubtype_label"])) for entry in members)
+    else:
+        cards = "\n".join(_render_catalogue_card(entry=entry, label=str(entry["type_label"])) for entry in members)
+    count_label = page.singular if len(members) == 1 else page.plural
+    body = f"""{_page_intro(page=page)}
+<section class="publication-section" data-catalogue>
+  <div class="filters" role="search" aria-label="Filter {_escape(value=page.plural)}">
+    <label class="search-field">{_icon(name='search')}<span class="sr-only">Search {_escape(value=page.plural)}</span><input data-search-input type="search" placeholder="Search {_escape(value=page.plural)} by title, author, venue, or tag…" autocomplete="off"></label>
+    {''.join(_category_filters(category=category, entries=members))}
+  </div>
+  <div class="result-bar"><span data-result-count data-singular="{_escape(value=page.singular)}" data-plural="{_escape(value=page.plural)}">{len(members)} {_escape(value=count_label)}</span><button data-clear type="button" hidden>Clear filters</button></div>
+  <div class="publication-list" data-list>{cards}</div>
+  <div class="empty-state" data-empty{'' if not members else ' hidden'}><span>{_icon(name='search')}</span><h3>No {_escape(value=page.plural)} found</h3><p>Try another search or clear the filters.</p></div>
+</section>
+"""
+    return _page_shell(
+        title=f"{page.label} · {project_name}",
+        description=page.summary,
+        body=body,
+        asset_prefix="",
+        asset_version=asset_version,
+        project_name=project_name,
+        active=page.slug,
     )
 
 
@@ -618,120 +859,112 @@ def render_repository_link(*, url: str) -> str:
 
 
 def _detail_rows(*, entry: dict[str, object]) -> str:
-    if entry["entry_type"] == "tool":
-        maintainers = entry["maintainers"] if isinstance(entry["maintainers"], list) else []
-        related = entry["related"] if isinstance(entry["related"], list) else []
-        values = [
-            ("Tool type", str(entry["tooltype"]).title()),
-            ("Status", str(entry["status"]).title()),
-            ("Maintainer", ", ".join(str(maintainer) for maintainer in maintainers)),
-            ("Access", entry["access"]),
-            ("Year", entry["year"]),
-            ("Institution", entry["institution"]),
-            ("License", entry["license"]),
-            ("Related entries", ", ".join(str(bib_key) for bib_key in related)),
-            ("BibTeX key", entry["bib_key"]),
-        ]
-    else:
-        values = [
-            ("Entry type", entry["type_label"]),
-            ("Year", entry["year"]),
-            ("Venue", entry["venue"]),
-            ("Volume", entry["volume"]),
-            ("Issue / number", entry["number"]),
-            ("Pages", entry["pages"]),
-            ("Publisher", entry["publisher"]),
-            ("Location", entry["address"]),
-            ("DOI", entry["doi"]),
-            ("BibTeX key", entry["bib_key"]),
-        ]
+    institution = entry["institution"] if entry["institution"] != entry["venue"] else ""
+    values = [
+        ("Publication type", entry["pubtype_label"]),
+        ("Tool type", str(entry["tooltype"]).title()),
+        ("Status", str(entry["status"]).title()),
+        ("Maintainer", ", ".join(str(maintainer) for maintainer in entry["maintainers"])),
+        ("Collaborating projects", ", ".join(str(partner) for partner in entry["partners"])),
+        ("Access", entry["access"]),
+        ("Year", entry["year"]),
+        ("Venue", entry["venue"]),
+        ("Institution", institution),
+        ("Volume", entry["volume"]),
+        ("Issue / number", entry["number"]),
+        ("Pages", entry["pages"]),
+        ("Publisher", entry["publisher"]),
+        ("Location", entry["address"]),
+        ("DOI", entry["doi"]),
+        ("License", entry["license"]),
+        ("BibTeX key", entry["bib_key"]),
+    ]
     return "".join(
         f'<div><dt>{_escape(value=label)}</dt><dd>{_escape(value=value)}</dd></div>' for label, value in values if value
     )
 
 
 def render_detail(*, entry: dict[str, object], project_name: str, asset_version: str) -> str:
-    authors = entry["authors"] if isinstance(entry["authors"], list) else []
-    maintainers = entry["maintainers"] if isinstance(entry["maintainers"], list) else []
-    keywords = entry["keywords"] if isinstance(entry["keywords"], list) else []
+    authors = entry["authors"]
+    maintainers = entry["maintainers"]
+    tags = entry["tags"]
+    categories = entry["categories"]
+    primary = str(entry["primary_category"])
+    primary_page = CATEGORY_PAGES[primary]
     title = str(entry["title"])
     subtitle = f'<p class="subtitle">{_escape(value=entry["subtitle"])}</p>' if entry["subtitle"] else ""
-    entry_type = entry["entry_type"]
-    is_project = entry_type == "project"
-    is_tool = entry_type == "tool"
-    is_publication = not is_project and not is_tool
-    if is_tool:
-        venue = f'<p class="detail-venue">{_escape(value=str(entry["tooltype"]).title())}</p>' if entry["tooltype"] else ""
-    else:
-        venue = f'<p class="detail-venue">{_escape(value=entry["venue"])} · {_escape(value=entry["year"])}</p>' if entry["venue"] else f'<p class="detail-venue">{_escape(value=entry["year"])}</p>'
-    lifecycle = entry["status"] if is_tool else entry["note"]
-    note = f'<span class="status-chip">{_escape(value=str(lifecycle).title())}</span>' if lifecycle else ""
-    author_line = f'<p class="detail-authors">{_format_author_list(authors=authors)}</p>' if authors else ""
-    if is_tool:
-        author_line = (
-            f'<p class="detail-authors"><strong>Maintained by</strong> {_format_author_list(authors=maintainers)}</p>'
-            if maintainers
-            else ""
-        )
+    is_tool = primary == "tool"
+
+    venue_parts = [str(entry["venue"]) or (str(entry["tooltype"]).title() if is_tool else ""), str(entry["year"])]
+    venue = f'<p class="detail-venue">{_escape(value=" · ".join(part for part in venue_parts if part))}</p>'
+    status = f'<span class="status-chip">{_escape(value=str(entry["status"]).title())}</span>' if entry["status"] else ""
+    if is_tool and maintainers:
+        author_line = f'<p class="detail-authors"><strong>Maintained by</strong> {_format_author_list(authors=maintainers)}</p>'
         if authors:
             author_line += f'<p class="tool-authors"><strong>Developed by</strong> {_format_author_list(authors=authors)}</p>'
+    else:
+        author_line = f'<p class="detail-authors">{_format_author_list(authors=authors)}</p>' if authors else ""
+        if maintainers:
+            author_line += f'<p class="tool-authors"><strong>Maintained by</strong> {_format_author_list(authors=maintainers)}</p>'
+    category_links = "".join(
+        f'<a href="../{CATEGORY_PAGES[category].filename}">{_escape(value=CATEGORY_PAGES[category].label)}</a>' for category in categories
+    )
+
     actions: list[str] = []
     if entry["url"]:
-        if is_tool:
-            action_label = "Open tool"
-        elif is_project:
-            action_label = "Visit project"
-        elif is_publication:
-            action_label = "View publication"
+        action_label = {"tool": "Open tool", "publication": "View publication"}.get(primary, "Visit project")
         actions.append(f'<a class="button button-primary" href="{_escape(value=entry["url"])}" rel="noopener noreferrer">{_icon(name="external")} {action_label}</a>')
-    if is_tool and entry["documentation"]:
+    if entry["documentation"]:
         actions.append(f'<a class="button button-secondary" href="{_escape(value=entry["documentation"])}" rel="noopener noreferrer">{_icon(name="book")} Documentation</a>')
     if entry["pdf"]:
         actions.append(f'<a class="button button-secondary" href="{_escape(value=entry["pdf"])}" rel="noopener noreferrer">{_icon(name="file")} PDF</a>')
     actions.append(render_repository_link(url=str(entry["projectlink"])))
+
     abstract = str(entry["abstract"])
-    about_heading = "About this tool" if is_tool else "Abstract"
-    missing_about = "No description is available in the bibliography." if is_tool else "No abstract is available in the bibliography."
-    abstract_section = f'<section class="paper-section"><h2>{about_heading}</h2><p class="abstract">{_escape(value=abstract)}</p></section>' if abstract else f'<section class="paper-section muted-section"><h2>{about_heading}</h2><p>{missing_about}</p></section>'
-    keyword_html = "".join(f'<span>{_escape(value=keyword)}</span>' for keyword in keywords)
-    keyword_section = f'<section class="paper-section"><h2>Keywords</h2><div class="keyword-list">{keyword_html}</div></section>' if keywords else ""
-    back_target = "tools" if is_tool else "projects"
-    back_label = "Tools &amp; Services" if is_tool else "Projects &amp; Publications"
-    if is_tool:
-        facts_heading = "Tool details"
-        entry_kind = "Tool"
-    elif is_project:
-        facts_heading = "Project details"
-        entry_kind = "Project"
-    elif is_publication:
-        facts_heading = "Publication details"
-        entry_kind = "Publication"
-    type_icon = "code" if is_tool else "book"
+    about_heading = {"tool": "About this tool", "publication": "Abstract"}.get(primary, "About this project")
+    abstract_section = (
+        f'<section class="paper-section"><h2>{about_heading}</h2><p class="abstract">{_escape(value=abstract)}</p></section>'
+        if abstract
+        else f'<section class="paper-section muted-section"><h2>{about_heading}</h2><p>No description is available in the bibliography.</p></section>'
+    )
+    tag_html = "".join(f'<span>{_escape(value=tag)}</span>' for tag in tags)
+    tag_section = f'<section class="paper-section"><h2>Tags</h2><div class="keyword-list">{tag_html}</div></section>' if tags else ""
+    related_html = "".join(
+        f'<li><a href="{_escape(value=related["filename"])}">{_escape(value=related["title"])}</a><span>{_escape(value=related["type_label"])}</span></li>'
+        for related in entry["related_entries"]
+    )
+    related_section = f'<section class="paper-section"><h2>Related entries</h2><ul class="related-list">{related_html}</ul></section>' if related_html else ""
+    if entry["citation_bibtex"]:
+        bibtex_heading, bibtex = "Cite (BibTeX)", str(entry["citation_bibtex"])
+    else:
+        bibtex_heading, bibtex = "BibTeX", str(entry["raw_bibtex"])
+    type_icon = {"tool": "code", "publication": "book"}.get(primary, "folder")
     body = f"""
-<div class="detail-back"><a href="../index.html#{back_target}">← Back to {back_label}</a></div>
+<div class="detail-back"><a href="../{primary_page.filename}">← Back to {_escape(value=primary_page.label)}</a></div>
 <article class="paper">
   <header class="paper-header">
-    <div class="paper-type">{_icon(name=type_icon)} {_escape(value=entry['type_label'])}{note}</div>
+    <div class="paper-type">{_icon(name=type_icon)} {_escape(value=entry['type_label'])}{status}</div>
     <h1>{_escape(value=title)}</h1>{subtitle}
-    {author_line}{venue}
+    {author_line}{venue}{_partner_line(entry=entry)}
+    <nav class="category-links" aria-label="Listed in">{category_links}</nav>
     <div class="paper-actions">{''.join(actions)}</div>
   </header>
   <div class="paper-layout">
-    <div>{abstract_section}{keyword_section}
-      <section class="paper-section citation-section"><div class="section-title-row"><h2>BibTeX</h2><button class="copy-button" type="button" data-copy-bib>{_icon(name='copy')} Copy</button></div><pre><code id="bibtex-entry">{_escape(value=entry['raw_bibtex'])}</code></pre></section>
+    <div>{abstract_section}{tag_section}{related_section}
+      <section class="paper-section citation-section"><div class="section-title-row"><h2>{bibtex_heading}</h2><button class="copy-button" type="button" data-copy-bib>{_icon(name='copy')} Copy</button></div><pre><code id="bibtex-entry">{_escape(value=bibtex)}</code></pre></section>
     </div>
-    <aside class="paper-facts"><h2>{facts_heading}</h2><dl>{_detail_rows(entry=entry)}</dl></aside>
+    <aside class="paper-facts"><h2>{_escape(value=CATEGORY_LABELS[primary])} details</h2><dl>{_detail_rows(entry=entry)}</dl></aside>
   </div>
 </article>
-<script src="../assets/site.js?v={_escape(value=asset_version)}" defer></script>
 """
     page = _page_shell(
         title=f"{title} · {project_name}",
-        description=abstract[:155] if abstract else f"{entry_kind} details for {title}.",
+        description=abstract[:155] if abstract else f"{CATEGORY_LABELS[primary]} details for {title}.",
         body=body,
         asset_prefix="../",
         asset_version=asset_version,
         project_name=project_name,
+        active=primary_page.slug,
     )
     return page.replace("<meta name=\"theme-color\"", f'<meta name="bib-key" content="{_escape(value=entry["bib_key"])}">\n  <meta name="theme-color"', 1)
 
@@ -772,118 +1005,88 @@ def generate_site_from_entries(
     *,
     entries: Sequence[dict[str, object]],
     docs_dir: Path,
-    allowed_entry_types: frozenset[str],
     project_name: str,
     project_subtitle: str,
     project_data_path: Path,
     logo_path: Path,
     source_root: Path,
 ) -> dict[str, int]:
-    """Rebuild the complete site from parsed BibTeX entries and homepage data."""
-    catalogue_entries = _sort_entries(
-        entries=(
-            _entry_to_catalogue_entry(entry=entry)
-            for entry in entries
-            if str(entry["entry_type"]) in allowed_entry_types
-        )
-    )
+    """Validate parsed BibTeX entries and rebuild the complete site."""
+    catalogue_entries = _sort_entries(entries=(_entry_to_catalogue_entry(entry=entry) for entry in entries))
+    _link_related_entries(entries=catalogue_entries)
+    project_data = load_inf_project_data(path=project_data_path)
+    asset_version = _asset_version(source_root=source_root)
     if docs_dir.exists():
         if not docs_dir.is_dir():
             raise NotADirectoryError(f"Site output path is not a directory: {docs_dir}")
         shutil.rmtree(docs_dir)
     publication_dir = docs_dir / "publications"
     publication_dir.mkdir(parents=True)
-
-    asset_version = _asset_version(source_root=source_root)
-    project_data = load_inf_project_data(path=project_data_path)
     _write_assets(docs_dir=docs_dir, logo_path=logo_path, source_root=source_root)
-    for entry in catalogue_entries:
-        target = publication_dir / str(entry["filename"])
-        rendered_page = render_detail(
-            entry=entry,
-            project_name=project_name,
-            asset_version=asset_version,
-        )
-        target.write_text(rendered_page, encoding="utf-8")
 
-    (docs_dir / "index.html").write_text(
-        render_index(
+    for entry in catalogue_entries:
+        (publication_dir / str(entry["filename"])).write_text(
+            render_detail(entry=entry, project_name=project_name, asset_version=asset_version),
+            encoding="utf-8",
+        )
+    pages = {
+        "index.html": render_index(
             entries=catalogue_entries,
             project_name=project_name,
             project_subtitle=project_subtitle,
             asset_version=asset_version,
             project_data=project_data,
         ),
-        encoding="utf-8",
-    )
+        PAGES_BY_SLUG["about"].filename: render_about_page(project_data=project_data, project_name=project_name, asset_version=asset_version),
+        PAGES_BY_SLUG["people"].filename: render_people_page(project_data=project_data, project_name=project_name, asset_version=asset_version),
+    }
+    for page in CATEGORY_PAGES.values():
+        pages[page.filename] = render_category_page(
+            page=page, entries=catalogue_entries, project_name=project_name, asset_version=asset_version
+        )
+    for filename, content in pages.items():
+        (docs_dir / filename).write_text(content, encoding="utf-8")
+
     manifest = {
-        "publications": [
+        "entries": [
             {
                 "bib_key": entry["bib_key"],
                 "filename": entry["filename"],
                 "title": entry["title"],
                 "year": entry["year"],
-                "entry_type": entry["entry_type"],
+                "categories": entry["categories"],
             }
             for entry in catalogue_entries
         ]
     }
     (publication_dir / "index.json").write_text(json.dumps(manifest, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     (docs_dir / ".nojekyll").touch()
-    return {
-        "generated": len(catalogue_entries),
-        "total": len(catalogue_entries),
-        "tools": sum(entry["entry_type"] == "tool" for entry in catalogue_entries),
-        "projects": sum(entry["entry_type"] == "project" for entry in catalogue_entries),
-        "publications": sum(entry["entry_type"] not in {"project", "tool"} for entry in catalogue_entries),
-        "ignored": len(entries) - len(catalogue_entries),
-    }
+    result = {"total": len(catalogue_entries)}
+    for category in CATEGORY_ORDER:
+        result[CATEGORY_PAGES[category].slug] = sum(category in entry["categories"] for entry in catalogue_entries)
+    return result
 
 
 def build_site(
     *,
     bib_path: Path,
     docs_dir: Path,
-    allowed_entry_types: frozenset[str],
     project_name: str,
     project_subtitle: str,
     project_data_path: Path,
     logo_path: Path,
     source_root: Path,
 ) -> dict[str, int]:
-    """Read one BibTeX file and rebuild the complete project catalogue."""
+    """Read one BibTeX file and rebuild the complete catalogue site."""
     return generate_site_from_entries(
         entries=read_bibtex_file(path=bib_path),
         docs_dir=docs_dir,
-        allowed_entry_types=allowed_entry_types,
         project_name=project_name,
         project_subtitle=project_subtitle,
         project_data_path=project_data_path,
         logo_path=logo_path,
         source_root=source_root,
     )
-
-
-def supported_entry_types(*, include_projects: bool = True) -> frozenset[str]:
-    entry_types = {
-        "article",
-        "book",
-        "booklet",
-        "inbook",
-        "incollection",
-        "inproceedings",
-        "manual",
-        "mastersthesis",
-        "misc",
-        "phdthesis",
-        "proceedings",
-        "techreport",
-        "unpublished",
-    }
-    if include_projects:
-        entry_types.add("project")
-        entry_types.add("tool")
-    return frozenset(entry_types)
 
 
 def _argument_parser(
@@ -893,13 +1096,13 @@ def _argument_parser(
     default_project_data_path: Path,
     default_logo_path: Path,
 ) -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(description="Rebuild the GitHub Pages project catalogue from one BibTeX file and the INF project JSON.")
+    parser = argparse.ArgumentParser(description="Rebuild the GitHub Pages catalogue from one BibTeX file and the INF project JSON.")
     parser.add_argument("bib_file", nargs="?", type=Path, default=default_bib_path, help=f"authoritative BibTeX input (default: {default_bib_path})")
     parser.add_argument("--docs-dir", type=Path, default=default_docs_dir, help=f"site output directory (default: {default_docs_dir})")
     parser.add_argument("--project-data", type=Path, default=default_project_data_path, help=f"editable INF homepage JSON (default: {default_project_data_path})")
     parser.add_argument("--logo", type=Path, default=default_logo_path, help=f"INF logo SVG (default: {default_logo_path})")
     parser.add_argument("--project-name", default="NegLab INF", help="short project name shown in the site header")
-    parser.add_argument("--project-subtitle", default="Infrastructure for research on negation", help="main heading shown on the project index")
+    parser.add_argument("--project-subtitle", default="Infrastructure for research on negation", help="main heading shown on the home page")
     return parser
 
 
@@ -912,23 +1115,17 @@ def main(*, argv: Sequence[str] | None = None) -> int:
         default_logo_path=project_root / "data" / "inf_logo.svg",
     )
     arguments = parser.parse_args(argv)
-    allowed_entry_types = supported_entry_types(include_projects=True)
     result = build_site(
         bib_path=arguments.bib_file,
         docs_dir=arguments.docs_dir,
-        allowed_entry_types=allowed_entry_types,
         project_name=arguments.project_name,
         project_subtitle=arguments.project_subtitle,
         project_data_path=arguments.project_data,
         logo_path=arguments.logo,
         source_root=Path(__file__).resolve().parent,
     )
-    print(
-        f"Rebuilt site from {arguments.bib_file}: {result['total']} catalogue entries "
-        f"({result['tools']} tools, {result['projects']} projects, {result['publications']} publications), "
-        f"{result['generated']} detail pages written, "
-        f"{result['ignored']} unsupported entries ignored."
-    )
+    counts = ", ".join(f"{result[page.slug]} {page.slug}" for page in CATEGORY_PAGES.values())
+    print(f"Rebuilt site from {arguments.bib_file}: {result['total']} catalogue entries ({counts}).")
     return 0
 
 

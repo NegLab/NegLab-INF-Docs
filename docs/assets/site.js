@@ -1,84 +1,46 @@
 document.addEventListener("DOMContentLoaded", () => {
-  const setupFilters = ({
-    searchId,
-    listId,
-    resultId,
-    clearId,
-    emptyId,
-    filters,
-    singular,
-    plural,
-  }) => {
-    const search = document.querySelector(`#${searchId}`);
-    const list = document.querySelector(`#${listId}`);
-    const cards = list ? [...list.querySelectorAll(".publication-card")] : [];
-    const resultCount = document.querySelector(`#${resultId}`);
-    const clearFilters = document.querySelector(`#${clearId}`);
-    const emptyState = document.querySelector(`#${emptyId}`);
-    const filterControls = filters.map(({ id, data }) => ({
-      element: document.querySelector(`#${id}`),
-      data,
-    }));
+  document.querySelectorAll("[data-catalogue]").forEach((catalogue) => {
+    const search = catalogue.querySelector("[data-search-input]");
+    const cards = [...catalogue.querySelectorAll("[data-list] .publication-card")];
+    const resultCount = catalogue.querySelector("[data-result-count]");
+    const clearFilters = catalogue.querySelector("[data-clear]");
+    const emptyState = catalogue.querySelector("[data-empty]");
+    const filters = [...catalogue.querySelectorAll("select[data-filter]")];
+    const singular = resultCount?.dataset.singular ?? "entry";
+    const plural = resultCount?.dataset.plural ?? "entries";
+
+    const matchesFilter = (card, select) => {
+      if (!select.value) return true;
+      const value = card.dataset[select.dataset.filter] ?? "";
+      if (select.dataset.filterMode === "token") return value.split("|").includes(select.value);
+      return value === select.value;
+    };
 
     const applyFilters = () => {
       const query = search?.value.trim().toLocaleLowerCase() ?? "";
       let visible = 0;
 
       cards.forEach((card) => {
-        const matchesSearch = !query || (card.dataset.search ?? "").includes(query);
-        const matchesFilters = filterControls.every(({ element, data }) => (
-          !element?.value || card.dataset[data] === element.value
-        ));
-        const matches = matchesSearch && matchesFilters;
+        const matches = (!query || (card.dataset.search ?? "").includes(query))
+          && filters.every((select) => matchesFilter(card, select));
         card.hidden = !matches;
         if (matches) visible += 1;
       });
 
       if (resultCount) resultCount.textContent = `${visible} ${visible === 1 ? singular : plural}`;
-      const hasFilters = Boolean(query || filterControls.some(({ element }) => element?.value));
-      if (clearFilters) clearFilters.hidden = !hasFilters;
+      if (clearFilters) clearFilters.hidden = !(query || filters.some((select) => select.value));
       if (emptyState) emptyState.hidden = visible !== 0;
     };
 
     search?.addEventListener("input", applyFilters);
-    filterControls.forEach(({ element }) => element?.addEventListener("change", applyFilters));
+    filters.forEach((select) => select.addEventListener("change", applyFilters));
     clearFilters?.addEventListener("click", () => {
       if (search) search.value = "";
-      filterControls.forEach(({ element }) => {
-        if (element) element.value = "";
-      });
+      filters.forEach((select) => { select.value = ""; });
       applyFilters();
       search?.focus();
     });
-    if (list || resultCount) applyFilters();
-  };
-
-  setupFilters({
-    searchId: "tool-search",
-    listId: "tool-list",
-    resultId: "tool-result-count",
-    clearId: "tool-clear-filters",
-    emptyId: "tool-empty-state",
-    filters: [
-      { id: "tool-type-filter", data: "tooltype" },
-      { id: "tool-status-filter", data: "status" },
-    ],
-    singular: "tool",
-    plural: "tools",
-  });
-
-  setupFilters({
-    searchId: "catalogue-search",
-    listId: "catalogue-list",
-    resultId: "catalogue-result-count",
-    clearId: "catalogue-clear-filters",
-    emptyId: "catalogue-empty-state",
-    filters: [
-      { id: "catalogue-year-filter", data: "year" },
-      { id: "catalogue-type-filter", data: "type" },
-    ],
-    singular: "entry",
-    plural: "entries",
+    applyFilters();
   });
 
   document.querySelector("[data-copy-bib]")?.addEventListener("click", async (event) => {

@@ -1,221 +1,240 @@
 {
-  "publications": [
+  "entries": [
     {
       "bib_key": "Borkowski:et:al:2026",
       "filename": "borkowski-et-al-2026-2dbbc97658.html",
       "title": "DUUIgateway: A Web Service for Platform-independent, Ubiquitous Big Data NLP",
       "year": "2026",
-      "entry_type": "article"
+      "categories": [
+        "publication"
+      ]
     },
     {
       "bib_key": "Hammerla:Mehler:2026:a",
       "filename": "hammerla-mehler-2026-a-9a2ea1d0c5.html",
       "title": "Gutenberg+: A More Temporally Faithful Corpus for Diachronic NLP",
       "year": "2026",
-      "entry_type": "inproceedings"
+      "categories": [
+        "publication"
+      ]
     },
     {
       "bib_key": "Abusaleh:et:al:2026",
       "filename": "abusaleh-et-al-2026-588252f184.html",
       "title": "Learning to Detect Cross-Modal Negation: An Analysis of Latent Representations and an Attention-Based Solution",
       "year": "2026",
-      "entry_type": "inproceedings"
+      "categories": [
+        "publication"
+      ]
     },
     {
       "bib_key": "Hammerla:Mehler:2026:b",
       "filename": "hammerla-mehler-2026-b-b15660f609.html",
       "title": "Negation in Reasoning Traces: Interpretable Signals of Correctness and Provenance",
       "year": "2026",
-      "entry_type": "inproceedings"
+      "categories": [
+        "publication"
+      ]
     },
     {
       "bib_key": "Luecking:Hammerla:Mehler:2026",
       "filename": "luecking-hammerla-mehler-2026-3c46533604.html",
       "title": "Not every quantifier can be negated",
       "year": "2026",
-      "entry_type": "inproceedings"
+      "categories": [
+        "publication"
+      ]
     },
     {
       "bib_key": "INF:RT-SEG",
       "filename": "inf-rt-seg-a0d391ab6a.html",
       "title": "RT-SEG",
       "year": "2026",
-      "entry_type": "tool"
+      "categories": [
+        "tool"
+      ]
     },
     {
       "bib_key": "Hammerla:etal:2026:c",
       "filename": "hammerla-etal-2026-c-e1418412ed.html",
       "title": "RT-Seg: A Toolkit for Reasoning Trace Segmentation",
       "year": "2026",
-      "entry_type": "inproceedings"
+      "categories": [
+        "publication"
+      ]
     },
     {
       "bib_key": "INF:Slurm",
       "filename": "inf-slurm-8a379953a5.html",
       "title": "Slurm HPC Infrastructure",
       "year": "2026",
-      "entry_type": "tool"
-    },
-    {
-      "bib_key": "INF:Slurm:2026",
-      "filename": "inf-slurm-2026-362dfc2d9d.html",
-      "title": "Slurm HPC Infrastructure",
-      "year": "2026",
-      "entry_type": "project"
+      "categories": [
+        "tool",
+        "project"
+      ]
     },
     {
       "bib_key": "Hammerla:et:al:2025b",
       "filename": "hammerla-et-al-2025b-cded7c9c2f.html",
       "title": "D-Neg: Syntax-Aware Graph Reasoning for Negation Detection",
       "year": "2025",
-      "entry_type": "inproceedings"
+      "categories": [
+        "publication",
+        "collaboration"
+      ]
     },
     {
       "bib_key": "Bahmanian:et:al:2025",
       "filename": "bahmanian-et-al-2025-c190587029.html",
       "title": "Data management protocol for CRC 1629",
       "year": "2025",
-      "entry_type": "techreport"
+      "categories": [
+        "publication"
+      ]
     },
     {
       "bib_key": "INF:DigitalDataManagementProtocol",
       "filename": "inf-digitaldatamanagementprotocol-c4e3629750.html",
       "title": "Digital Data Management Protocol",
       "year": "2025",
-      "entry_type": "project"
-    },
-    {
-      "bib_key": "INF:DigitalDataManagementProtocol:Tool",
-      "filename": "inf-digitaldatamanagementprotocol-tool-9c12626f3f.html",
-      "title": "Digital Data Management Protocol",
-      "year": "2025",
-      "entry_type": "tool"
+      "categories": [
+        "tool",
+        "project"
+      ]
     },
     {
       "bib_key": "INF:DUUI",
       "filename": "inf-duui-aaae3ec39b.html",
       "title": "Docker Unified UIMA Interface",
       "year": "2025",
-      "entry_type": "tool"
+      "categories": [
+        "tool"
+      ]
     },
     {
       "bib_key": "Abrami:et:al:2025:a",
       "filename": "abrami-et-al-2025-a-fabce1edf1.html",
       "title": "Docker Unified UIMA Interface: New perspectives for NLP on big data",
       "year": "2025",
-      "entry_type": "article"
+      "categories": [
+        "publication"
+      ]
     },
     {
       "bib_key": "Luecking:Ginzburg:2025-exceptions",
       "filename": "luecking-ginzburg-2025-exceptions-fc1c9cc26c.html",
       "title": "Exceptions From Rules and Noteworthy Exceptions",
       "year": "2025",
-      "entry_type": "article"
+      "categories": [
+        "publication"
+      ]
     },
     {
       "bib_key": "INF:LabelStudio",
       "filename": "inf-labelstudio-9cac4ac155.html",
       "title": "Label Studio Annotation Platform",
       "year": "2025",
-      "entry_type": "tool"
-    },
-    {
-      "bib_key": "INF:LabelStudio:2025",
-      "filename": "inf-labelstudio-2025-bd06e8a97c.html",
-      "title": "Label Studio Annotation Platform",
-      "year": "2025",
-      "entry_type": "project"
+      "categories": [
+        "tool",
+        "project"
+      ]
     },
     {
       "bib_key": "INF:ItalDia:2025",
       "filename": "inf-italdia-2025-3b1cc4cde6.html",
       "title": "LLM Annotation Pipeline",
       "year": "2025",
-      "entry_type": "project"
+      "categories": [
+        "project",
+        "collaboration"
+      ]
     },
     {
       "bib_key": "INF:MoTR:2025",
       "filename": "inf-motr-2025-d77eb6e928.html",
       "title": "Mouse Tracking for Reading",
       "year": "2025",
-      "entry_type": "project"
+      "categories": [
+        "project",
+        "collaboration"
+      ]
     },
     {
       "bib_key": "Bundan:Abrami:Mehler:2025",
       "filename": "bundan-abrami-mehler-2025-8933b17591.html",
       "title": "Multimodal Docker Unified UIMA Interface: New Horizons for Distributed Microservice-Oriented Processing of Corpora using UIMA",
       "year": "2025",
-      "entry_type": "inproceedings"
+      "categories": [
+        "publication"
+      ]
     },
     {
       "bib_key": "INF:AnnotationModel:2025",
       "filename": "inf-annotationmodel-2025-8784b3f0c5.html",
       "title": "NPI Annotation Model",
       "year": "2025",
-      "entry_type": "project"
+      "categories": [
+        "project",
+        "collaboration"
+      ]
     },
     {
       "bib_key": "INF:OpenWebUI",
       "filename": "inf-openwebui-f148d01805.html",
       "title": "OpenWebUI and Local LLM Hosting",
       "year": "2025",
-      "entry_type": "tool"
-    },
-    {
-      "bib_key": "INF:OpenWebUI:2025",
-      "filename": "inf-openwebui-2025-2fdbda8ca7.html",
-      "title": "OpenWebUI and Local LLM Hosting",
-      "year": "2025",
-      "entry_type": "project"
+      "categories": [
+        "tool",
+        "project"
+      ]
     },
     {
       "bib_key": "INF:ScopeAnnotation:2025",
       "filename": "inf-scopeannotation-2025-f206ab1457.html",
       "title": "Scope Annotation Task",
       "year": "2025",
-      "entry_type": "project"
+      "categories": [
+        "project",
+        "collaboration"
+      ]
     },
     {
       "bib_key": "Hammerla:et:al:2025a",
       "filename": "hammerla-et-al-2025a-03143c8588.html",
       "title": "Standardizing Heterogeneous Corpora with DUUR: A Dual Data- and Process-Oriented Approach to Enhancing NLP Pipeline Integration",
       "year": "2025",
-      "entry_type": "inproceedings"
+      "categories": [
+        "publication"
+      ]
     },
     {
       "bib_key": "INF:Surprisal",
       "filename": "inf-surprisal-11041d1b74.html",
       "title": "Surprisal Program",
       "year": "2025",
-      "entry_type": "tool"
-    },
-    {
-      "bib_key": "INF:Surprisal:2025",
-      "filename": "inf-surprisal-2025-b5dd19c811.html",
-      "title": "Surprisal Program",
-      "year": "2025",
-      "entry_type": "project"
+      "categories": [
+        "tool",
+        "project"
+      ]
     },
     {
       "bib_key": "INF:SurrealDB",
       "filename": "inf-surrealdb-4eccb407c5.html",
       "title": "SurrealDB Data-Sharing Infrastructure",
       "year": "2025",
-      "entry_type": "tool"
-    },
-    {
-      "bib_key": "INF:SurrealDB:2025",
-      "filename": "inf-surrealdb-2025-a75f389c0d.html",
-      "title": "SurrealDB Data-Sharing Infrastructure",
-      "year": "2025",
-      "entry_type": "project"
+      "categories": [
+        "tool",
+        "project"
+      ]
     },
     {
       "bib_key": "INF:UCEvis:2025",
       "filename": "inf-ucevis-2025-af4f9dc5b1.html",
       "title": "UCE data visualization",
       "year": "2025",
-      "entry_type": "project"
+      "categories": [
+        "project"
+      ]
     }
   ]
 }

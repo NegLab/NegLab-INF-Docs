@@ -1,12 +1,12 @@
 # NegLab INF catalogue
 
-Static GitHub Pages catalogue for tools, projects, and publications of the INF
-subproject of CRC 1629 NegLaB. The complete site is generated with
+Static GitHub Pages catalogue for tools, projects, publications, and
+collaborations of the INF subproject of CRC 1629 NegLaB. The complete site is generated with
 dependency-free Python from two manually maintained content files and one logo
 asset:
 
 - `data/neglab-inf.bib` is the single authoritative catalogue source for
-  tools, projects, publications, and their links.
+  tools, projects, publications, collaborations, and their links.
 - `data/inf-project.json` contains the INF description, services, research
   areas, related links, contact text, and people.
 - `data/inf_logo.svg` is retained as the INF visual-identity source and defines
@@ -41,53 +41,57 @@ python3 src/build_publications.py --docs-dir /tmp/neglab-inf-preview
 
 The selected output directory is replaced completely during the build.
 
-## Editing tools, projects, and publications
+## Editing tools, projects, publications, and collaborations
 
-Edit `data/neglab-inf.bib` directly. Standard BibTeX publication types such as
-`@article`, `@inproceedings`, and `@techreport` are supported. The catalogue
-also accepts two NegLab INF-specific entry types:
-
-- `@tool` for reusable software, hosted services, infrastructure, and
-  workflows made available by INF.
-- `@project` for research, development, annotation, and collaboration
-  activities carried out by INF.
-
-The categories are additive rather than mutually exclusive. If a project or
-publication also has a reusable tool, keep the original entry unchanged and
-add a separate `@tool` entry with its own unique key. Use the tool’s `related`
-field to reference the project or publication key. The two records then appear
-in their respective homepage catalogues and receive separate detail pages.
-
-All three categories live in the same `data/neglab-inf.bib` file. Do not create
-a separate tool catalogue or data file. See
-[TOOL_BIBTEX_SCHEMA.md](TOOL_BIBTEX_SCHEMA.md) and
-[PROJECT_BIBTEX_SCHEMA.md](PROJECT_BIBTEX_SCHEMA.md) for their complete
-schemas and the distinction between them.
-
-Each entry must have a unique BibTeX key. That key determines its stable,
-collision-resistant filename under `docs/publications/`. Duplicate keys stop
-the build with an error.
-
-For code or archive links, manually add a `projectlink` field to the entry:
+Edit `data/neglab-inf.bib` directly. Every entry uses the same BibTeX type,
+`@project`. Its `keywords` field lists the catalogue categories that decide
+on which website tabs the entry appears:
 
 ```bibtex
-projectlink = {https://github.com/example/project},
+@project{INF:ExampleService,
+  keywords      = {tool, project, collaboration},
+  collaboration = {B01},
+  name        = {Example Service},
+  abstract    = {What the service provides.},
+  tooltype    = {service},
+  url         = {https://example.org/service},
+  projectlink = {https://github.com/example/service},
+  tags        = {annotation, hosting}
+}
 ```
+
+- `tool` → **Tools & Services**
+- `project` → **Projects**
+- `publication` → **Publications** (also set `pubtype`, e.g. `article` or
+  `inproceedings`)
+- `collaboration` → **Collaborations** (joint work with other CRC projects;
+  also add `collaboration = {A02, C05}` listing the partner projects)
+
+An entry may list several categories. It then appears on every matching tab
+but keeps a single detail page. The first category is the primary one, which
+sets the back link and the label on that page. Topical search terms go in
+`tags`, not in `keywords`. Other entry types, unknown categories, duplicate
+keys, and `related` keys that do not exist all stop the build with an error.
+
+See [PROJECT_BIBTEX_SCHEMA.md](PROJECT_BIBTEX_SCHEMA.md) for all fields.
+
+Each entry's BibTeX key determines its stable, collision-resistant filename
+under `docs/publications/`, so do not rename published keys.
 
 The link fields have distinct uses:
 
-- `url`: primary tool, project, or publication landing page, shown as “Open
-  tool”, “Visit project”, or “View publication”.
+- `url`: primary landing page, shown as “Open tool”, “Visit project”, or
+  “View publication”.
 - `projectlink`: code repository or archival record, shown as “Code & archive”.
-- `documentation`: dedicated tool documentation, shown as “Documentation” on
-  `@tool` detail pages.
+  If it is absent, the detail page displays a disabled placeholder.
+- `documentation`: dedicated documentation, shown as “Documentation”.
 - `pdf`: direct PDF link.
 
-If `projectlink` is absent, the detail page displays an empty disabled
-placeholder.
+Publication detail pages offer a standard citation BibTeX generated from the
+entry, using `pubtype` as the entry type and leaving out catalogue-only
+fields.
 
-After adding or editing a tool, project, or publication, rebuild in exactly the
-same way:
+After adding or editing an entry, rebuild:
 
 ```bash
 python3 src/build_publications.py
@@ -117,11 +121,15 @@ After any BibTeX or JSON edit, run the normal build command again.
 
 The build writes:
 
-- `docs/index.html`: INF information, people, category statistics, a searchable
-  Tools & Services catalogue, and a separate searchable Projects &
-  Publications catalogue.
-- `docs/publications/*.html`: one detail page per supported BibTeX entry.
-- `docs/publications/index.json`: mapping from BibTeX keys to generated files.
+- `docs/index.html`: home page with one panel per tab, including counts.
+- `docs/about.html`: INF description, research areas, services, and contact.
+- `docs/people.html`: the INF team, grouped by role.
+- `docs/tools.html`, `docs/projects.html`, `docs/publications.html`,
+  `docs/collaborations.html`: searchable, filterable lists of the entries in
+  each category.
+- `docs/publications/*.html`: one detail page per BibTeX entry.
+- `docs/publications/index.json`: mapping from BibTeX keys to generated files
+  and categories.
 - `docs/assets/`: the stylesheet, JavaScript, and copied visual-identity asset
   used by GitHub Pages.
 - `docs/.nojekyll`: disables unnecessary Jekyll processing.
