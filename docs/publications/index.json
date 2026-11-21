@@ -1,6 +1,16 @@
 {
   "entries": [
     {
+      "bib_key": "INF:IndividualDifferencesNegation:2026",
+      "filename": "inf-individualdifferencesnegation-2026-4b072275c1.html",
+      "title": "Are there reliable individual differences in negation processing?",
+      "year": "2026",
+      "categories": [
+        "project",
+        "collaboration"
+      ]
+    },
+    {
       "bib_key": "Borkowski:et:al:2026",
       "filename": "borkowski-et-al-2026-2dbbc97658.html",
       "title": "DUUIgateway: A Web Service for Platform-independent, Ubiquitous Big Data NLP",
